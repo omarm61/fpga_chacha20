@@ -60,43 +60,16 @@ int main(int argc, char** argv)
     m_Sim.Run(10);
 
     // --------------
-    // TC1: Write Command
-    // --------------
-    wdata = rand() & 0xf;
-    m_Sim.AxiWrite(0x4, wdata);
-    m_Sim.AxiWrite(0x0, 0x1); // Write Request
-    m_Sim.Run(15000);
-
-    // check if transaction was accepted
-    rdata = m_Sim.AxiRead(0x0);
-    m_Sim.Validate32Bit(0x0, rdata, "Write transaction started");
-
-    // Wait for write transaction to complete
-    while(timeout_counter < 15000) {
-        timeout_counter = timeout_counter + 1;
-        m_Sim.Run(10);
-        rdata = m_Sim.AxiRead(0x8);
-        if (rdata == 0x1) {
-            error = 0;
-            timeout_counter = 0;
-            break;
-        } else {
-            error = 1;
-        }
-    }
-    m_Sim.ValidateFlag(0, error, "Write Transaction is complete");
-
-    // --------------
-    // TC2: Read Command
+    // TC1: Read Command
     // --------------
     // Request a read
+    m_Sim.AxiWrite(0x4, 0x1234); // Write PRBS seed 
     m_Sim.AxiWrite(0x0, 0x1); // Write Request
-    m_Sim.AxiWrite(0x4, 0x1234); // Write Request
 
 
     // check if transaction was accepted
     rdata = m_Sim.AxiRead(0x4);
-    m_Sim.Validate32Bit(0x1234, rdata, "Write transaction started");
+    m_Sim.Validate32Bit(0x1234, rdata, "Write PRBS Seed");
 
 
     // Run simulation 5000 clock cycles

@@ -40,6 +40,8 @@ module transmitter#(
 
 // **Wires
 wire [31:0] w_prbs_out;
+wire        w_reg_prbs_start;
+wire [31:0] w_reg_prbs_seed;
 
 // **Registers
 reg r_axis_tvalid;

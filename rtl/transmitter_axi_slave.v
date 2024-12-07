@@ -364,8 +364,8 @@ end
 
 // Add user logic here
   // Control signals
-  assign o_reg_prbs_start   = slv_reg[32'h0][0];
-  assign o_reg_prbs_seed   = slv_reg[32'h4];
+  assign o_reg_prbs_start   = slv_reg[0][0];
+  assign o_reg_prbs_seed   = slv_reg[1];
 
 
 // User logic ends

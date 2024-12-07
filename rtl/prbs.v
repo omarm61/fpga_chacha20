@@ -24,7 +24,7 @@ always @(posedge i_aclk or negedge i_aresetn) begin
   end
   else begin
     // FIXME: this sequence is incorrect
-    if (i_prbs_seed) begin
+    if (i_start) begin
       r_prbs <= {
                 r_prbs[PRBS_LENGTH-2:0], 
                 r_prbs[PRBS_LENGTH-1]^r_prbs[PRBS_LENGTH-16-1]^r_prbs[PRBS_LENGTH-5-1]
