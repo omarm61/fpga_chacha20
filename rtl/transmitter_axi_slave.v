@@ -97,6 +97,7 @@ reg  	axi_rvalid;
 // ADDR_LSB is used for addressing 32/64 bit registers/memories
 // ADDR_LSB = 2 for 32 bits (n downto 2)
 // ADDR_LSB = 3 for 64 bits (n downto 3)
+`define NUM_REG     4    
 localparam integer ADDR_LSB = (C_S_AXI_DATA_WIDTH/32) + 1;
 localparam integer OPT_MEM_ADDR_BITS = $clog2(`NUM_REG);
 //----------------------------------------------
@@ -236,15 +237,6 @@ assign slv_reg_wren = axi_wready && S_AXI_WVALID && axi_awready && S_AXI_AWVALID
                   end
               end
           end
-
-          // Reset go bit
-          if (i_reg_ready == 1'b0) begin
-              slv_reg[`S_AXI_AGILTRON_TTL_CONTROL_OFFSET/4][`S_AXI_AGILTRON_TTL_CONTROL_WRITE_INDEX] <= 1'b0;
-              slv_reg[`S_AXI_AGILTRON_TTL_CONTROL_OFFSET/4][`S_AXI_AGILTRON_TTL_CONTROL_READ_INDEX] <= 1'b0;
-          end
-          slv_reg[`S_AXI_AGILTRON_TTL_STATUS_OFFSET/4][`S_AXI_AGILTRON_TTL_STATUS_READY_INDEX] <= i_reg_ready;
-          slv_reg[`S_AXI_AGILTRON_TTL_STATUS_OFFSET/4][`S_AXI_AGILTRON_TTL_STATUS_ERROR_INDEX] <= i_reg_error;
-          slv_reg[`S_AXI_AGILTRON_TTL_READ_OFFSET/4][`S_AXI_AGILTRON_TTL_READ_DATA_INDEX] <= i_reg_read_data;
       end
   end
 

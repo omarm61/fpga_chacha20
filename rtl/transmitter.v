@@ -29,17 +29,27 @@ module transmitter#(
   output wire [C_S_AXI_DATA_WIDTH-1 : 0]    s_axi_rdata,
   output wire [1 : 0]                       s_axi_rresp,
   output wire                               s_axi_rvalid,
-  input wire                                s_axi_rready
+  input wire                                s_axi_rready,
   // AXI-Stream - OUTPUT
-  input wire         s_axis_tready,
-  output wire        s_axis_tvalid,
-  output wire        s_axis_sof, // Start of frame
-  output wire [31:0] s_axis_tdata,
+  input wire         m_axis_tready,
+  output wire        m_axis_tvalid,
+  output wire        m_axis_sof, // Start of frame
+  output wire [31:0] m_axis_tdata
 );
 
 
-// **Wire
+// **Wires
 wire [31:0] w_prbs_out;
+
+// **Registers
+reg r_axis_tvalid;
+reg r_axis_sof;
+reg [31:0] r_axis_tdata;
+
+// Assignment
+assign m_axis_tvalid = r_axis_tvalid;
+assign m_axis_sof    = r_axis_sof;
+assign m_axis_tdata  = r_axis_tdata;
 
 
 // Instantiation of Axi Bus Interface S_AXI
@@ -86,21 +96,21 @@ prbs prbs_inst(
 // AXI-Stream Master
 always @(posedge s_axi_aclk or negedge s_axi_aresetn) begin
   if(s_axi_aresetn == 1'b0) begin
-    s_axis_tvalid <= 1'b0;
-    s_axis_sof    <= 1'b0;
-    s_axis_tdata  <= 'd0;
+    r_axis_tvalid <= 1'b0;
+    r_axis_sof    <= 1'b0;
+    r_axis_tdata  <= 'd0;
   end
   else begin
-    if (s_axis_tready == 1'b1) begin
+    if (m_axis_tready == 1'b1) begin
       // TODO: add logic to handle start of frame
-      s_axis_sof <= 1'b0;
+      r_axis_sof <= 1'b0;
 
       if (w_reg_prbs_start == 1'b1) begin
-        s_axis_tvalid <= 1'b1;
-        s_axis_tdata <= w_prbs_out;
+        r_axis_tvalid <= 1'b1;
+        r_axis_tdata <= w_prbs_out;
       end
       else begin
-        s_axis_tvalid <= 1'b0;
+        r_axis_tvalid <= 1'b0;
       end
     end
   end

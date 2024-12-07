@@ -9,7 +9,7 @@ module prbs(
 // Fibonacci PRBS?
 // y = x^32 + x^5 + 1
 // **Parameters
-localparam PRBS_LENGTH = 32
+localparam PRBS_LENGTH = 32;
 
 // **Registers
 reg [PRBS_LENGTH-1:0] r_prbs;
