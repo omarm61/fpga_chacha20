@@ -14,7 +14,7 @@ INC_DIR = -I../tb
 INC_DIR += -I../tb/axi_interconnect
 
 
-INC_DIR += -I../rtl
+INC_DIR += -I../rtl/tx
 
 .DEFAULT_GOAL := help
 .PHONY: help build

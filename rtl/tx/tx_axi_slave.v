@@ -1,5 +1,5 @@
 `timescale 1 ns / 1 ps
-module transmitter_axi_slave #
+module tx_axi_slave #
 (
   // Users to add parameters here
 

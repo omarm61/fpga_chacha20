@@ -1,4 +1,4 @@
-module transmitter#(
+module tx#(
   // Input Clock in MHz
   parameter integer C_CLOCK_FREQ = 100,
 
@@ -55,10 +55,10 @@ assign m_axis_tdata  = r_axis_tdata;
 
 
 // Instantiation of Axi Bus Interface S_AXI
-transmitter_axi_slave #(
+tx_axi_slave #(
   .C_S_AXI_DATA_WIDTH(C_S_AXI_DATA_WIDTH),
   .C_S_AXI_ADDR_WIDTH(C_S_AXI_ADDR_WIDTH)
-) transmitter_axi_slave_inst (
+) tx_axi_slave_inst (
   // Control Registers
   .o_reg_prbs_start (w_reg_prbs_start),
   .o_reg_prbs_seed (w_reg_prbs_seed),

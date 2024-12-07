@@ -107,12 +107,12 @@ axi_interconnect #(
 // INDEX:   - PRBS Transmitter
 // Description: TTL interface
 // --------------------------------------
-transmitter #
+tx #
 (
     // Parameters of Axi Slave Bus Interface S_AXI
     .C_S_AXI_DATA_WIDTH(32),
     .C_S_AXI_ADDR_WIDTH(32)
-) transmitter_inst (
+) tx_inst (
 
     // Ports of Axi Slave Bus Interface S_AXI
     .s_axi_aclk    (s_axi_aclk),
