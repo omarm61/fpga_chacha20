@@ -57,6 +57,5 @@ help: makefile
 	@echo ""
 	@echo " - Verialtor     : Simulation"
 	@echo " - Gtkwave       : Used for viewing waveforms"
-	@echo " - Vivado 2020.1 : Used to build the fpga and generate the bitstream"
 	@echo ""
 	@echo "------------------------------------------------------------\n"

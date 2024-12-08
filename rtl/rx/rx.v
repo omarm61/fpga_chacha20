@@ -43,7 +43,7 @@ module rx #(
   wire [31:0] w_prbs_out;
   wire [31:0] w_reg_prbs_seed;
   wire        w_reg_rx_enable;
-  wire        w_prbs_start;
+  wire        w_reg_prbs_reload;
 
   // **Registers
   reg         r_axis_tready;
@@ -52,55 +52,57 @@ module rx #(
   reg         r_rx_sof;
   reg         r_rx_eof;
   reg  [31:0] r_prbs_sync_check;
+  reg         r_prbs_run;
 
   // Assignment
   assign s_axis_tready = r_axis_tready;
-  assign w_prbs_start  = s_axis_tvalid && r_reg_rx_enable_d;
 
 
   // -----------------------
-  // Instantiation of Axi Bus Interface S_AXI
+  // Axi Bus Interface S_AXI
   // -----------------------
   rx_axi_slave #(
       .C_S_AXI_DATA_WIDTH(C_S_AXI_DATA_WIDTH),
       .C_S_AXI_ADDR_WIDTH(C_S_AXI_ADDR_WIDTH)
   ) rx_axi_slave_inst (
       // Registers
-      .o_reg_rx_enable(w_reg_rx_enable),
-      .o_reg_prbs_seed(w_reg_prbs_seed),
+      .o_reg_rx_enable  (w_reg_rx_enable),
+      .o_reg_prbs_reload(w_reg_prbs_reload),
+      .o_reg_prbs_seed  (w_reg_prbs_seed),
       // AXI Bus
-      .S_AXI_ACLK     (s_axi_aclk),
-      .S_AXI_ARESETN  (s_axi_aresetn),
-      .S_AXI_AWADDR   (s_axi_awaddr),
-      .S_AXI_AWPROT   (s_axi_awprot),
-      .S_AXI_AWVALID  (s_axi_awvalid),
-      .S_AXI_AWREADY  (s_axi_awready),
-      .S_AXI_WDATA    (s_axi_wdata),
-      .S_AXI_WSTRB    (s_axi_wstrb),
-      .S_AXI_WVALID   (s_axi_wvalid),
-      .S_AXI_WREADY   (s_axi_wready),
-      .S_AXI_BRESP    (s_axi_bresp),
-      .S_AXI_BVALID   (s_axi_bvalid),
-      .S_AXI_BREADY   (s_axi_bready),
-      .S_AXI_ARADDR   (s_axi_araddr),
-      .S_AXI_ARPROT   (s_axi_arprot),
-      .S_AXI_ARVALID  (s_axi_arvalid),
-      .S_AXI_ARREADY  (s_axi_arready),
-      .S_AXI_RDATA    (s_axi_rdata),
-      .S_AXI_RRESP    (s_axi_rresp),
-      .S_AXI_RVALID   (s_axi_rvalid),
-      .S_AXI_RREADY   (s_axi_rready)
+      .S_AXI_ACLK       (s_axi_aclk),
+      .S_AXI_ARESETN    (s_axi_aresetn),
+      .S_AXI_AWADDR     (s_axi_awaddr),
+      .S_AXI_AWPROT     (s_axi_awprot),
+      .S_AXI_AWVALID    (s_axi_awvalid),
+      .S_AXI_AWREADY    (s_axi_awready),
+      .S_AXI_WDATA      (s_axi_wdata),
+      .S_AXI_WSTRB      (s_axi_wstrb),
+      .S_AXI_WVALID     (s_axi_wvalid),
+      .S_AXI_WREADY     (s_axi_wready),
+      .S_AXI_BRESP      (s_axi_bresp),
+      .S_AXI_BVALID     (s_axi_bvalid),
+      .S_AXI_BREADY     (s_axi_bready),
+      .S_AXI_ARADDR     (s_axi_araddr),
+      .S_AXI_ARPROT     (s_axi_arprot),
+      .S_AXI_ARVALID    (s_axi_arvalid),
+      .S_AXI_ARREADY    (s_axi_arready),
+      .S_AXI_RDATA      (s_axi_rdata),
+      .S_AXI_RRESP      (s_axi_rresp),
+      .S_AXI_RVALID     (s_axi_rvalid),
+      .S_AXI_RREADY     (s_axi_rready)
   );
 
   // -----------------------
   // PRBS Generator
   // -----------------------
   prbs prbs_inst (
-      .i_aclk     (s_axi_aclk),
-      .i_aresetn  (s_axi_aresetn),
-      .i_start    (w_prbs_start),
-      .i_prbs_seed(w_reg_prbs_seed),
-      .o_prbs     (w_prbs_out)
+      .i_aclk       (s_axi_aclk),
+      .i_aresetn    (s_axi_aresetn),
+      .i_prbs_run   (r_prbs_run),
+      .i_prbs_reload(w_reg_prbs_reload),
+      .i_prbs_seed  (w_reg_prbs_seed),
+      .o_prbs       (w_prbs_out)
   );
 
 
@@ -130,9 +132,13 @@ module rx #(
     end else begin
       // Check that tvalid is set before capturing data
       if (r_axis_tready == 1'b1 && s_axis_tvalid == 1'b1) begin
-        r_rx_data <= s_axis_tdata;
-        r_rx_sof  <= s_axis_sof;
-        r_rx_eof  <= s_axis_eof;
+        r_rx_data  <= s_axis_tdata;
+        r_rx_sof   <= s_axis_sof;
+        r_rx_eof   <= s_axis_eof;
+        // Run PRBS generator
+        r_prbs_run <= 1'b1;
+      end else begin
+        r_prbs_run <= 1'b0;
       end
     end
   end

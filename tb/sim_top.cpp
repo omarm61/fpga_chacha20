@@ -14,6 +14,14 @@
 #include "Vtb_fpga.h"
 #include "../../tb/FpgaSim.h"
 
+#define TX_AXI_OFFSET     0x0
+#define TX_AXI_CONTROL    TX_AXI_OFFSET+0x0
+#define TX_AXI_PRBS_SEED  TX_AXI_OFFSET+0x4
+
+#define RX_AXI_OFFSET     0x10000000
+#define RX_AXI_CONTROL    RX_AXI_OFFSET+0x0
+#define RX_AXI_PRBS_SEED  RX_AXI_OFFSET+0x4
+
 using namespace std;
 
 
@@ -60,16 +68,27 @@ int main(int argc, char** argv)
     m_Sim.Run(10);
 
     // --------------
-    // TC1: Read Command
+    // Configure TX
     // --------------
-    // Request a read
-    m_Sim.AxiWrite(0x4, 0x1234); // Write PRBS seed 
-    m_Sim.AxiWrite(0x0, 0x1); // Write Request
-
-
+    // Write SEED and enable module
+    m_Sim.AxiWrite(TX_AXI_PRBS_SEED, 0x1234); // Write PRBS seed 
+    m_Sim.AxiWrite(TX_AXI_CONTROL, 0x2); // Load SEED 
+    m_Sim.AxiWrite(TX_AXI_CONTROL, 0x1); // Write Request
     // check if transaction was accepted
-    rdata = m_Sim.AxiRead(0x4);
-    m_Sim.Validate32Bit(0x1234, rdata, "Write PRBS Seed");
+    rdata = m_Sim.AxiRead(TX_AXI_PRBS_SEED);
+    m_Sim.Validate32Bit(0x1234, rdata, "Configure TX");
+
+    // --------------
+    // Configure RX
+    // --------------
+    // Write SEED and enable module
+    m_Sim.AxiWrite(RX_AXI_PRBS_SEED, 0x1234); // Write PRBS seed 
+    m_Sim.AxiWrite(RX_AXI_CONTROL, 0x2); // Load SEED 
+    m_Sim.AxiWrite(RX_AXI_CONTROL, 0x1); // Write Request
+    // check if transaction was accepted
+    rdata = m_Sim.AxiRead(RX_AXI_PRBS_SEED);
+    m_Sim.Validate32Bit(0x1234, rdata, "Configure RX");
+
 
 
     // Run simulation 5000 clock cycles

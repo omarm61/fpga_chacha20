@@ -13,6 +13,7 @@ module rx_axi_slave #(
     // Users to add ports here
     // Control Registers
     output wire        o_reg_rx_enable,
+    output wire        o_reg_prbs_reload,
     output wire [31:0] o_reg_prbs_seed,
     // Do not modify the ports beyond this line
 
@@ -217,6 +218,10 @@ module rx_axi_slave #(
           end
         end
       end
+      // Reset reload signal after 1cc
+      if (slv_reg[0][1] == 1'b1) begin
+        slv_reg[0][1] <= 1'b0;
+      end
     end
   end
 
@@ -320,8 +325,9 @@ module rx_axi_slave #(
 
   // Add user logic here
   // Control signals
-  assign o_reg_rx_enable = slv_reg[0][0];
-  assign o_reg_prbs_seed = slv_reg[1];
+  assign o_reg_rx_enable   = slv_reg[0][0];
+  assign o_reg_prbs_reload = slv_reg[0][1];
+  assign o_reg_prbs_seed   = slv_reg[1];
 
 
   // User logic ends
