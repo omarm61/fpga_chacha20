@@ -1,6 +1,7 @@
 # fpga_chacha20
 
-__NOTE__: This project is still in the works. (very early stage)
+> [!caution]
+> This project is under development.
 
 This is a derivative ChaCha20 algorithm implementation in RTL.
 
