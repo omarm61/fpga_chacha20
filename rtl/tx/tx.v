@@ -30,6 +30,10 @@ module tx #(
     output wire [                       1 : 0] s_axi_rresp,
     output wire                                s_axi_rvalid,
     input  wire                                s_axi_rready,
+    // AXI-Stream - INPUT
+    output wire                                s_axis_tready,
+    input  wire                                s_axis_tvalid,
+    input  wire [                        31:0] s_axis_tdata,
     // AXI-Stream - OUTPUT
     input  wire                                m_axis_tready,
     output wire                                m_axis_tvalid,
@@ -56,7 +60,8 @@ module tx #(
   assign m_axis_sof    = r_axis_sof;
   assign m_axis_tdata  = r_axis_tdata;
 
-  assign w_prbs_run = w_reg_tx_enable & m_axis_tready;
+  assign w_prbs_run = w_reg_tx_enable && m_axis_tready && s_axis_tvalid;
+  assign s_axis_tready = w_reg_tx_enable && m_axis_tready;
 
 
   // -----------------------
@@ -122,9 +127,9 @@ module tx #(
         // TODO: add logic to handle start of frame
         r_axis_sof <= 1'b0;
 
-        if (r_reg_tx_enable_d == 1'b1) begin
+        if (r_reg_tx_enable_d == 1'b1 && s_axis_tvalid == 1'b1) begin
           r_axis_tvalid <= 1'b1;
-          r_axis_tdata  <= w_prbs_out;
+          r_axis_tdata  <= w_prbs_out ^ s_axis_tdata;
         end else begin
           r_axis_tvalid <= 1'b0;
         end

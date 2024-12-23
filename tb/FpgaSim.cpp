@@ -105,7 +105,7 @@ void CFpgaSim::Reset()
 int CFpgaSim::WaitSignal(CData &sig, uint32_t val, uint32_t timeout)
 {
   uint32_t count = 0;
-  int ret = 1;
+  int ret = -1;
 
   while(count < timeout)
   {
@@ -139,9 +139,29 @@ void CFpgaSim::PrintInfo(string str)
     cout << main_time << "ns: " << str << endl;
 }
 
+/** Validate String data
+****************************************************************************/
+void CFpgaSim::ValidateString(std::string expected, std::string result, const std::string& str)
+{
+    if (expected == result)
+    {
+        cout << "\n------------------------------------------" << endl;
+        cout << main_time << "ns: "<< "Test \033[1;32mPass\033[0m: " << str << endl;
+        cout << "------------------------------------------\n" << endl;
+    }
+    else
+    {
+        cout << "\n------------------------------------------" << endl;
+        cout << main_time << "ns: " << "Test \033[1;31mFail\033[0m: " << str << endl;
+        cout << "   expected: "<< expected << endl;
+        cout << "   result: "<< result << endl;
+        cout << "------------------------------------------\n" << endl;
+    }
+}
+
 /** Validate 32bit data
 ****************************************************************************/
-void CFpgaSim::Validate32Bit(uint32_t expected, uint32_t result, string str)
+void CFpgaSim::Validate32Bit(uint32_t expected, uint32_t result, const std::string& str)
 {
     if (expected == result)
     {
@@ -161,7 +181,7 @@ void CFpgaSim::Validate32Bit(uint32_t expected, uint32_t result, string str)
 
 /** Validate 16bit data
 ****************************************************************************/
-void CFpgaSim::Validate16Bit(uint16_t expected, uint16_t result, string str)
+void CFpgaSim::Validate16Bit(uint16_t expected, uint16_t result, const std::string& str)
 {
     if (expected == result)
     {
@@ -179,7 +199,7 @@ void CFpgaSim::Validate16Bit(uint16_t expected, uint16_t result, string str)
 
 /** Validate flag
 ****************************************************************************/
-void CFpgaSim::ValidateFlag(bool expected, bool result, string str)
+void CFpgaSim::ValidateFlag(bool expected, bool result, const std::string& str)
 {
     if (expected == result)
     {
@@ -306,16 +326,92 @@ int CFpgaSim::AxiSetBit(uint32_t offset, uint32_t index, bool flag)
 
 /** Capture AXI Stream data
 ****************************************************************************/
-sTxData CFpgaSim::AxisTxCapture(int timeout)
+//sTxData CFpgaSim::AxisTxCapture(int timeout)
+//{
+//    int count = 0;
+//    int index = 0;
+//
+//    sTxData tx_data;
+//
+//    WaitSignal(ptop->m_axis_tvalid, 1, timeout);
+//    for (index = 0; index <= 7; index++) {
+//        tx_data.u32Sample[index*2] = ptop->m_axis_tdata;
+//    }
+//    return tx_data;
+//}
+
+/** Send Unencrypted message
+****************************************************************************/
+int CFpgaSim::SendData(const std::string& strMsg, int iTimeout)
+{
+  const int CHUNKSIZE = 4; // 4 bytes is the default so it can fit in a 32bit register
+  uint32_t u32Msg = 0;
+
+  // Split the string to 4 byte chunks and transmit over axi-stream
+  for (size_t i = 0; i < strMsg.size(); i+=CHUNKSIZE) {
+    // Wait for AXI-Stream to be ready
+    // NOTE: This function advances the clock by 1cc so you don't need the Run(1) function before writing data
+    if(WaitSignal(ptop->s_axis_tx_tready, 1, iTimeout) == -1){
+      // Transmission Failed
+      return -1;
+    }
+
+    std::string strMsgChunk = strMsg.substr(i,CHUNKSIZE);
+    char* cMsgByte = strMsgChunk.data();
+
+    for (size_t i=0; i < 4; i++) {
+      u32Msg = (u32Msg << 8) | static_cast<uint8_t>(*cMsgByte);
+      cMsgByte++;
+    }
+    //Run(1);
+    ptop->s_axis_tx_tdata = u32Msg;
+    ptop->s_axis_tx_tvalid = 1;
+  }
+  Run(1);
+  ptop->s_axis_tx_tvalid = 0;
+
+  return 0;
+}
+
+
+/** Receive Unencrypted message
+****************************************************************************/
+sTxData CFpgaSim::ReadRxFifo(int timeout)
 {
     int count = 0;
     int index = 0;
 
-    sTxData tx_data;
+    sTxData sData;
 
-    WaitSignal(ptop->m_axis_tvalid, 1, timeout);
-    for (index = 0; index <= 7; index++) {
-        tx_data.u32Sample[index*2] = ptop->m_axis_tdata;
+    ptop->m_axis_fifo_rx_tready = 1;
+    for (index = 0; index < 8; index++) {
+      if(WaitSignal(ptop->m_axis_fifo_rx_tvalid, 1, timeout) == 0){
+        sData.u32Sample[index] = ptop->m_axis_fifo_rx_tdata;
+      }
     }
-    return tx_data;
+    return sData;
+}
+
+/** Receive Unencrypted message as string
+****************************************************************************/
+std::string CFpgaSim::ReadRxFifoString(int iLength, int iTimeout)
+{
+    sTxData sData;
+    string strRxData;
+    union {
+      uint32_t value;
+      uint8_t  bytes[4];
+    } uData;
+
+    sData = ReadRxFifo(iTimeout);
+    
+    for (int w = 0; w < iLength/4; w++) {
+      uData.value = sData.u32Sample[w];
+      std::reverse(uData.bytes, uData.bytes + 4);
+      for (int i = 0; i < 4; i++) {
+        strRxData += static_cast<char>(uData.bytes[i]);
+      }
+    }
+
+    return strRxData;
 }

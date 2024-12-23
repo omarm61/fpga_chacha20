@@ -32,7 +32,7 @@ int main(int argc, char** argv)
     Verilated::commandArgs(argc, argv);
 
     int verbose = 0;
-    int error = 0;
+    int ret = 0;
     int timeout_counter = 0;
     uint32_t wdata = 0;
     uint32_t rdata = 0;
@@ -88,6 +88,19 @@ int main(int argc, char** argv)
     // check if transaction was accepted
     rdata = m_Sim.AxiRead(RX_AXI_PRBS_SEED);
     m_Sim.Validate32Bit(0x1234, rdata, "Configure RX");
+
+    // Transmit data
+    std::string txMsg = "Hello World!";
+    printf("-->> Tx Message: %s \n", txMsg.c_str());
+    ret = m_Sim.SendData(txMsg, 10000);
+    m_Sim.ValidateFlag(0, ret, "Sending Message..");
+
+    // Receive encrypted data
+    std::string rxMsg = m_Sim.ReadRxFifoString(txMsg.length(), 10000);
+    printf("-->> Rx Message: %s \n", rxMsg.c_str());
+
+    m_Sim.ValidateString(txMsg, rxMsg, "Tx/Rx match");
+
 
 
 

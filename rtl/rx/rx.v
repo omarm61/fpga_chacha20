@@ -30,12 +30,18 @@ module rx #(
     output wire [                       1 : 0] s_axi_rresp,
     output wire                                s_axi_rvalid,
     input  wire                                s_axi_rready,
+
+    // AXI-Stream - INPUT
+    output wire        s_axis_tready,
+    input  wire        s_axis_tvalid,
+    input  wire        s_axis_sof,     // Start of frame
+    input  wire        s_axis_eof,     // Start of frame
+    input  wire [31:0] s_axis_tdata,
+
     // AXI-Stream - OUTPUT
-    output wire                                s_axis_tready,
-    input  wire                                s_axis_tvalid,
-    input  wire                                s_axis_sof,     // Start of frame
-    input  wire                                s_axis_eof,     // Start of frame
-    input  wire [                        31:0] s_axis_tdata
+    input  wire        m_axis_tready,
+    output wire        m_axis_tvalid,
+    output wire [31:0] m_axis_tdata
 );
 
 
@@ -51,11 +57,15 @@ module rx #(
   reg  [31:0] r_rx_data;
   reg         r_rx_sof;
   reg         r_rx_eof;
-  reg  [31:0] r_prbs_sync_check;
   reg         r_prbs_run;
+  reg  [31:0] r_axis_tdata;
+  reg         r_axis_tvalid;
 
   // Assignment
   assign s_axis_tready = r_axis_tready;
+
+  assign m_axis_tdata  = r_axis_tdata;
+  assign m_axis_tvalid = r_axis_tvalid;
 
 
   // -----------------------
@@ -131,7 +141,7 @@ module rx #(
       r_rx_eof  <= 1'b0;
     end else begin
       // Check that tvalid is set before capturing data
-      if (r_axis_tready == 1'b1 && s_axis_tvalid == 1'b1) begin
+      if (r_axis_tready && s_axis_tvalid) begin
         r_rx_data  <= s_axis_tdata;
         r_rx_sof   <= s_axis_sof;
         r_rx_eof   <= s_axis_eof;
@@ -143,17 +153,22 @@ module rx #(
     end
   end
 
-  // NOTE: This logic is used to check if the reciever and transmitter is in
-  // sync
+  // FIXME: This logic can't handle back pressure. Need to stop transmission
+  // when AXI-Stream is not ready to receive data
   always @(posedge s_axi_aclk or negedge s_axi_aresetn) begin
     if (s_axi_aresetn == 1'b0) begin
-      r_prbs_sync_check <= 32'd0;
+      r_axis_tdata  <= 32'd0;
+      r_axis_tvalid <= 1'b0;
     end else begin
-      if (r_reg_rx_enable_d == 1'b1) begin
-        r_prbs_sync_check <= r_rx_data ^ w_prbs_out;
+      if (m_axis_tready) begin
+        if (r_prbs_run) begin
+          r_axis_tdata  <= r_rx_data ^ w_prbs_out;
+          r_axis_tvalid <= 1'b1;
+        end else begin
+          r_axis_tvalid <= 1'b0;
+        end
       end
     end
   end
 
 endmodule
-

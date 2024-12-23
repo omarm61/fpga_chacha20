@@ -16,11 +16,15 @@ module tb_fpga (
     input wire s_axi_aclk,
     input wire s_axi_aresetn,
 
-    // Transmitter. AXI-Stream Output
-    output wire        m_axis_tready,
-    output wire        m_axis_tvalid,
-    output wire        m_axis_sof,
-    output wire [31:0] m_axis_tdata,
+    // Transmitter. input data
+    output wire        s_axis_tx_tready,
+    input  wire        s_axis_tx_tvalid,
+    input  wire [31:0] s_axis_tx_tdata,
+
+    // Reciever FIFO
+    output wire        m_axis_fifo_rx_tready,
+    output wire        m_axis_fifo_rx_tvalid,
+    output wire [31:0] m_axis_fifo_rx_tdata,
 
 
     // Ports of Axi Slave Bus Interface S00_AXI
@@ -49,6 +53,15 @@ module tb_fpga (
   localparam integer NUM_AXI_INTF = 2;
 
   // **Wires
+  wire        m_axis_tx_tready;
+  wire        m_axis_tx_tvalid;
+  wire        m_axis_tx_sof;
+  wire [31:0] m_axis_tx_tdata;
+  //
+  wire        m_axis_rx_tready;
+  wire        m_axis_rx_tvalid;
+  wire [31:0] m_axis_rx_tdata;
+
 
 
   axi_if axi_s ();
@@ -104,8 +117,7 @@ module tb_fpga (
 
   // --------------------------------------
   // INDEX: ___
-  // INDEX:   - PRBS Transmitter
-  // Description: TTL interface
+  // INDEX:   - Transmitter
   // --------------------------------------
   tx #(
       // Parameters of Axi Slave Bus Interface S_AXI
@@ -136,17 +148,20 @@ module tb_fpga (
       .s_axi_rvalid (axi_m[0].rvalid),
       .s_axi_rready (axi_m[0].rready),
 
+      // AXI-Stream - INPUT encrypted data
+      .s_axis_tready(s_axis_tx_tready),
+      .s_axis_tvalid(s_axis_tx_tvalid),
+      .s_axis_tdata (s_axis_tx_tdata),
+
       // AXI-Stream - OUTPUT encrypted data
-      .m_axis_tready(m_axis_tready),
-      .m_axis_tvalid(m_axis_tvalid),
-      .m_axis_sof   (m_axis_sof),     // Start of frame
-      .m_axis_tdata (m_axis_tdata)
+      .m_axis_tready(m_axis_tx_tready),
+      .m_axis_tvalid(m_axis_tx_tvalid),
+      .m_axis_sof   (m_axis_tx_sof),     // Start of frame
+      .m_axis_tdata (m_axis_tx_tdata)
   );
 
   // --------------------------------------
-  // INDEX: ___
-  // INDEX:   - PRBS Transmitter
-  // Description: TTL interface
+  // INDEX:   - Reciever
   // --------------------------------------
   rx #(
       // Parameters of Axi Slave Bus Interface S_AXI
@@ -178,10 +193,38 @@ module tb_fpga (
       .s_axi_rready (axi_m[1].rready),
 
       // AXI-Stream - INPUT encrypted data
-      .s_axis_tready(m_axis_tready),
-      .s_axis_tvalid(m_axis_tvalid),
-      .s_axis_sof   (m_axis_sof),     // Start of frame
-      .s_axis_tdata (m_axis_tdata)
+      .s_axis_tready(m_axis_tx_tready),
+      .s_axis_tvalid(m_axis_tx_tvalid),
+      .s_axis_sof   (m_axis_tx_sof),     // Start of frame
+      .s_axis_tdata (m_axis_tx_tdata),
+
+      // AXI-Stream - OUTPUT Decrypted data
+      .m_axis_tready(m_axis_rx_tready),
+      .m_axis_tvalid(m_axis_rx_tvalid),
+      .m_axis_tdata (m_axis_rx_tdata)
   );
+
+  // --------------------------------------
+  // INDEX:   - Receiver FIFO
+  // Description: FIFO for buffering decrypted data
+  // --------------------------------------
+  fifo_axis #(
+      .C_FIFO_WIDTH(32),
+      .C_FIFO_DEPTH(8)
+  ) fifo_axis_rx_inst (
+      // Clock/rese
+      .i_aclk       (s_axi_aclk),
+      .i_aresetn    (s_axi_aresetn),
+      // AXI-Stream - INPUT
+      .s_axis_tready(m_axis_rx_tready),
+      .s_axis_tvalid(m_axis_rx_tvalid),
+      .s_axis_tdata (m_axis_rx_tdata),
+      //
+      // AXI-Stream - OUTPUT
+      .m_axis_tready(m_axis_fifo_rx_tready),
+      .m_axis_tvalid(m_axis_fifo_rx_tvalid),
+      .m_axis_tdata (m_axis_fifo_rx_tdata)
+  );
+
 
 endmodule
