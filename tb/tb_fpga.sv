@@ -22,9 +22,14 @@ module tb_fpga (
     input  wire [31:0] s_axis_tx_tdata,
 
     // Reciever FIFO
-    output wire        m_axis_fifo_rx_tready,
+    input  wire        m_axis_fifo_rx_tready,
     output wire        m_axis_fifo_rx_tvalid,
     output wire [31:0] m_axis_fifo_rx_tdata,
+
+    // Reciever FIFO
+    input  wire        m_axis_fifo_encrypt_tready,
+    output wire        m_axis_fifo_encrypt_tvalid,
+    output wire [31:0] m_axis_fifo_encrypt_tdata,
 
 
     // Ports of Axi Slave Bus Interface S00_AXI
@@ -55,8 +60,15 @@ module tb_fpga (
   // **Wires
   wire        m_axis_tx_tready;
   wire        m_axis_tx_tvalid;
-  wire        m_axis_tx_sof;
   wire [31:0] m_axis_tx_tdata;
+  //
+  wire        m_axis_bc1_tready;
+  wire        m_axis_bc1_tvalid;
+  wire [31:0] m_axis_bc1_tdata;
+  //
+  wire        m_axis_bc2_tready;
+  wire        m_axis_bc2_tvalid;
+  wire [31:0] m_axis_bc2_tdata;
   //
   wire        m_axis_rx_tready;
   wire        m_axis_rx_tvalid;
@@ -156,9 +168,30 @@ module tb_fpga (
       // AXI-Stream - OUTPUT encrypted data
       .m_axis_tready(m_axis_tx_tready),
       .m_axis_tvalid(m_axis_tx_tvalid),
-      .m_axis_sof   (m_axis_tx_sof),     // Start of frame
+      .m_axis_sof   (),     // Start of frame
       .m_axis_tdata (m_axis_tx_tdata)
   );
+
+  // --------------------------------------
+  // INDEX:   - AXIS-Stream Broadcaster
+  // --------------------------------------
+  axis_broadcaster #(
+      .C_DATA_WIDTH(32)
+  ) axis_broadcaster_inst (
+      // AXI-Stream - INPUT TX encrypted data
+      .s_axis_tready(m_axis_tx_tready),
+      .s_axis_tvalid(m_axis_tx_tvalid),
+      .s_axis_tdata(m_axis_tx_tdata),
+      // CH1
+      .m_axis_1_tready(m_axis_bc1_tready),
+      .m_axis_1_tvalid(m_axis_bc1_tvalid),
+      .m_axis_1_tdata(m_axis_bc1_tdata),
+      // CH2
+      .m_axis_2_tready(m_axis_bc2_tready),
+      .m_axis_2_tvalid(m_axis_bc2_tvalid),
+      .m_axis_2_tdata(m_axis_bc2_tdata)
+  );
+
 
   // --------------------------------------
   // INDEX:   - Reciever
@@ -193,10 +226,10 @@ module tb_fpga (
       .s_axi_rready (axi_m[1].rready),
 
       // AXI-Stream - INPUT encrypted data
-      .s_axis_tready(m_axis_tx_tready),
-      .s_axis_tvalid(m_axis_tx_tvalid),
-      .s_axis_sof   (m_axis_tx_sof),     // Start of frame
-      .s_axis_tdata (m_axis_tx_tdata),
+      .s_axis_tready(m_axis_bc1_tready),
+      .s_axis_tvalid(m_axis_bc1_tvalid),
+      .s_axis_sof   (),     // Start of frame
+      .s_axis_tdata (m_axis_bc1_tdata),
 
       // AXI-Stream - OUTPUT Decrypted data
       .m_axis_tready(m_axis_rx_tready),
@@ -226,5 +259,26 @@ module tb_fpga (
       .m_axis_tdata (m_axis_fifo_rx_tdata)
   );
 
+  // --------------------------------------
+  // INDEX:   - Tx Encrypted FIFO
+  // Description: FIFO for capturing the encrypted data
+  // --------------------------------------
+  fifo_axis #(
+      .C_FIFO_WIDTH(32),
+      .C_FIFO_DEPTH(8)
+  ) fifo_axis_encrypt_inst (
+      // Clock/rese
+      .i_aclk       (s_axi_aclk),
+      .i_aresetn    (s_axi_aresetn),
+      // AXI-Stream - INPUT
+      .s_axis_tready(m_axis_bc2_tready),
+      .s_axis_tvalid(m_axis_bc2_tvalid),
+      .s_axis_tdata (m_axis_bc2_tdata),
+      //
+      // AXI-Stream - OUTPUT
+      .m_axis_tready(m_axis_fifo_encrypt_tready),
+      .m_axis_tvalid(m_axis_fifo_encrypt_tvalid),
+      .m_axis_tdata (m_axis_fifo_encrypt_tdata)
+  );
 
 endmodule

@@ -53,6 +53,8 @@ public:
   int SendData(const std::string& str, int iTimeout);
   sTxData ReadRxFifo(int timeout);
   std::string ReadRxFifoString(int iLength, int iTimeout);
+  sTxData ReadEncryptFifo(int timeout);
+  std::string ReadEncryptFifoString(int iLength, int iTimeout);
 };
 
 #endif // FPGA_SIM_H

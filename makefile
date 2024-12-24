@@ -18,6 +18,7 @@ INC_DIR += -I../rtl/common
 INC_DIR += -I../rtl/tx
 INC_DIR += -I../rtl/rx
 INC_DIR += -I../rtl/fifo
+INC_DIR += -I../rtl/axis_broadcaster
 
 .DEFAULT_GOAL := help
 .PHONY: help build

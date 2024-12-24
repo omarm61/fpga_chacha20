@@ -389,6 +389,9 @@ sTxData CFpgaSim::ReadRxFifo(int timeout)
         sData.u32Sample[index] = ptop->m_axis_fifo_rx_tdata;
       }
     }
+    Run(1);
+    ptop->m_axis_fifo_rx_tready = 0;
+
     return sData;
 }
 
@@ -404,6 +407,51 @@ std::string CFpgaSim::ReadRxFifoString(int iLength, int iTimeout)
     } uData;
 
     sData = ReadRxFifo(iTimeout);
+    
+    for (int w = 0; w < iLength/4; w++) {
+      uData.value = sData.u32Sample[w];
+      std::reverse(uData.bytes, uData.bytes + 4);
+      for (int i = 0; i < 4; i++) {
+        strRxData += static_cast<char>(uData.bytes[i]);
+      }
+    }
+
+    return strRxData;
+}
+
+/** Capture Encrypted message message
+****************************************************************************/
+sTxData CFpgaSim::ReadEncryptFifo(int timeout)
+{
+    int count = 0;
+    int index = 0;
+
+    sTxData sData;
+
+    ptop->m_axis_fifo_encrypt_tready = 1;
+    for (index = 0; index < 8; index++) {
+      if(WaitSignal(ptop->m_axis_fifo_encrypt_tvalid, 1, timeout) == 0){
+        sData.u32Sample[index] = ptop->m_axis_fifo_encrypt_tdata;
+      }
+    }
+    Run(1);
+    ptop->m_axis_fifo_encrypt_tready = 0;
+
+    return sData;
+}
+
+/** Receive Unencrypted message as string
+****************************************************************************/
+std::string CFpgaSim::ReadEncryptFifoString(int iLength, int iTimeout)
+{
+    sTxData sData;
+    string strRxData;
+    union {
+      uint32_t value;
+      uint8_t  bytes[4];
+    } uData;
+
+    sData = ReadEncryptFifo(iTimeout);
     
     for (int w = 0; w < iLength/4; w++) {
       uData.value = sData.u32Sample[w];
