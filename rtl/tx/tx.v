@@ -100,7 +100,7 @@ module tx #(
   );
 
   // -----------------------
-  // PRBS Generator
+  // PRBS Generator (Keystream)
   // -----------------------
   prbs prbs_inst (
       .i_aclk       (s_axi_aclk),
@@ -113,6 +113,7 @@ module tx #(
 
 
   // AXI-Stream Master
+  // Cipher
   always @(posedge s_axi_aclk or negedge s_axi_aresetn) begin
     if (s_axi_aresetn == 1'b0) begin
       r_axis_tvalid <= 1'b0;
