@@ -26,7 +26,7 @@ module tb_fpga (
     output wire        m_axis_fifo_rx_tvalid,
     output wire [31:0] m_axis_fifo_rx_tdata,
 
-    // Reciever FIFO
+    // Encrypted FIFO
     input  wire        m_axis_fifo_encrypt_tready,
     output wire        m_axis_fifo_encrypt_tvalid,
     output wire [31:0] m_axis_fifo_encrypt_tdata,

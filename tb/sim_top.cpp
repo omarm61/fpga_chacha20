@@ -96,11 +96,11 @@ int main(int argc, char** argv)
     m_Sim.ValidateFlag(0, ret, "Sending Message..");
 
     // Encrypted data
-    std::string encryptMsg = m_Sim.ReadEncryptFifoString(txMsg.length(), 10000);
+    std::string encryptMsg = m_Sim.ReadAxiStreamString(m_Sim.m_sAxiStreamEncrypt.value(), txMsg.length(), 10000);
     printf("-->> Encrypted Message: %s \n", encryptMsg.c_str());
 
     // Received data
-    std::string rxMsg = m_Sim.ReadRxFifoString(txMsg.length(), 10000);
+    std::string rxMsg = m_Sim.ReadAxiStreamString(m_Sim.m_sAxiStreamRx.value(), txMsg.length(), 10000);
     printf("-->> Rx Message: %s \n", rxMsg.c_str());
 
     m_Sim.ValidateString(txMsg, rxMsg, "Tx/Rx match");

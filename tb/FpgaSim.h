@@ -2,6 +2,7 @@
 #define FPGA_SIM_H
 
 #include <stdint.h>
+#include <optional>
 #include "Vtb_fpga.h"
 
 class VerilatedVcdC;
@@ -9,7 +10,7 @@ class Vtb_fpga;
 
 
 // Encrypted Data Capture
-struct sTxData{
+struct sAxiStreamData{
     uint32_t u32Sample [16];  // [15:0]
 };
 
@@ -26,7 +27,21 @@ public:
   {
     static CFpgaSim sim;
     return sim;
-  }
+  };
+
+
+  struct sAxiStreamInterface {
+    CData& tready;
+    CData& tvalid;
+    IData& tdata;
+
+    sAxiStreamInterface(CData& tready, CData& tvalid, IData& tdata)
+    : tready(tready), tvalid(tvalid), tdata(tdata) {}
+  };
+
+  std::optional<sAxiStreamInterface> m_sAxiStreamRx;
+  std::optional<sAxiStreamInterface> m_sAxiStreamEncrypt;
+
   // Functions
   // Common simulation functions
   void TraceDump(int lvl);
@@ -51,10 +66,8 @@ public:
   // Transmitter Module
   //sTxData  AxisTxCapture(int timeout);
   int SendData(const std::string& str, int iTimeout);
-  sTxData ReadRxFifo(int timeout);
-  std::string ReadRxFifoString(int iLength, int iTimeout);
-  sTxData ReadEncryptFifo(int timeout);
-  std::string ReadEncryptFifoString(int iLength, int iTimeout);
+  sAxiStreamData ReadAxiStream(sAxiStreamInterface& sAxi , int timeout);
+  std::string ReadAxiStreamString(sAxiStreamInterface& sAxi, int iLength, int iTimeout);
 };
 
 #endif // FPGA_SIM_H
