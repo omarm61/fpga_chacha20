@@ -50,6 +50,7 @@ public:
   void Run(uint64_t limit);
   void Reset();
   void PrintHeader(std::string str);
+  void PrintTestHeader(std::string str);
   void PrintInfo(std::string str);
   int  WaitSignal(CData &sig, uint32_t val, uint32_t timeout);
   void ValidateString(std::string expected, std::string result, const std::string& str);
@@ -65,7 +66,7 @@ public:
   int  AxiSetBit(uint32_t offset, uint32_t index, bool flag);
   // Transmitter Module
   //sTxData  AxisTxCapture(int timeout);
-  int SendData(const std::string& str, int iTimeout);
+  int WriteAxiStream(const std::string& str, int iTimeout);
   sAxiStreamData ReadAxiStream(sAxiStreamInterface& sAxi , int timeout);
   std::string ReadAxiStreamString(sAxiStreamInterface& sAxi, int iLength, int iTimeout);
 };

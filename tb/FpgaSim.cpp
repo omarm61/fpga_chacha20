@@ -144,6 +144,15 @@ void CFpgaSim::PrintHeader(string str)
     cout << "==============================================\n" << endl;
 }
 
+/** Testcase Header
+****************************************************************************/
+void CFpgaSim::PrintTestHeader(string str)
+{
+    cout << "\n==============================================" << endl;
+    cout << "\033[1;33mTestcase: \033[1;0m" << str << endl;
+    cout << "==============================================\n" << endl;
+}
+
 /** Print simulation info
 ****************************************************************************/
 void CFpgaSim::PrintInfo(string str)
@@ -354,7 +363,7 @@ int CFpgaSim::AxiSetBit(uint32_t offset, uint32_t index, bool flag)
 
 /** Send Unencrypted message
 ****************************************************************************/
-int CFpgaSim::SendData(const std::string& strMsg, int iTimeout)
+int CFpgaSim::WriteAxiStream(const std::string& strMsg, int iTimeout)
 {
   const int CHUNKSIZE = 4; // 4 bytes is the default so it can fit in a 32bit register
   uint32_t u32Msg = 0;

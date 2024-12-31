@@ -74,3 +74,17 @@ Each cell is 32-bit wide.
 | Key       | Key      | Key      | Key      |
 | Nonce     | Nonce    | Nonce    | 010101   |
 
+
+#### Simulation
+
+1) Use a Test vectors and different input combinations. (ref. [poly1305])
+
+[poly1305]: https://datatracker.ietf.org/doc/html/draft-agl-tls-chacha20poly1305-04#section-7
+
+2) Correlation analysis. Correlation between plaintext and cipher
+
+3) Use tools like dieharder or testU01 to analyze randomness of the output
+
+4) Avalanche Effect, single bit effect in key and plaintext. (ref. [Avalanche effect])
+
+[Avalanche effect]: https://www.geeksforgeeks.org/avalanche-effect-in-cryptography/

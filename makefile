@@ -6,6 +6,7 @@ TB_NAME = tb_fpga
 # Top Level simulation file, contains all testcases and controls to the rtl in tb_fpga.sv
 CPP_FILE = ../tb/sim_top.cpp
 CPP_FILE += ../tb/FpgaSim.cpp
+CPP_FILE += ../tb/testcases/TestPrbsCipher.cpp
 
 # Top Level FPGA testbench, contains all the RTL routing
 TB_TOP = ../tb/tb_fpga.sv

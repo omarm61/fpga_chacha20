@@ -13,6 +13,7 @@
 
 #include "Vtb_fpga.h"
 #include "../../tb/FpgaSim.h"
+#include "../../tb/testcases/TestPrbsCipher.h"
 
 #define TX_AXI_OFFSET     0x0
 #define TX_AXI_CONTROL    TX_AXI_OFFSET+0x0
@@ -45,6 +46,9 @@ int main(int argc, char** argv)
     srand(seed);
 
     CFpgaSim& m_Sim = CFpgaSim::get_sim();
+
+    // Initiate test suites 
+    CTestPrbsCipher   m_TestPrbsCipher(m_Sim);
 
     int opt;
     while ((opt = getopt(argc, argv, "tv:")) != -1)
@@ -92,7 +96,7 @@ int main(int argc, char** argv)
     // Transmit data
     std::string txMsg = "Hello World!";
     printf("-->> Tx Message: %s \n", txMsg.c_str());
-    ret = m_Sim.SendData(txMsg, 10000);
+    ret = m_Sim.WriteAxiStream(txMsg, 10000);
     m_Sim.ValidateFlag(0, ret, "Sending Message..");
 
     // Encrypted data
@@ -105,6 +109,8 @@ int main(int argc, char** argv)
 
     m_Sim.ValidateString(txMsg, rxMsg, "Tx/Rx match");
 
+    // PRBS Test Suite
+    m_TestPrbsCipher.test_suite();
 
 
 
