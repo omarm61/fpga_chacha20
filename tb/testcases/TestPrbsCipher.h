@@ -5,10 +5,13 @@ class CTestPrbsCipher
 {
     public:
         CTestPrbsCipher(CFpgaSim& thesim): sim(thesim) {};
+        void ConfigureRx(uint32_t &seed);
+        void ConfigureTx(uint32_t &seed);
         // Test Functions
-        void key_correlation(); 
+        void TestHelloWorld();
+        void TestKeyCorrelation(); 
         // Test Suite
-        void test_suite(); // Run multiple testcases
+        void RunTestSuite(uint32_t &seed); // Run multiple testcases
     private:
         CFpgaSim& sim;
 };

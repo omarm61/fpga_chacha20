@@ -43,22 +43,23 @@ waves:
 create_sim_dir:
 	@mkdir -p $(SIM_DIR)
 
-## --------------------------------
+# --------------------------------
 ## clean: delete simulation output files
 clean:
 	rm -rf $(SIM_DIR)/obj_dir;
 
+BASH_ESC=$(shell printf '\033')
 
 ## help: Generate help message
 help: makefile
-	@echo "------------------------------------------------------------\n"
-	@echo "*Make Options:"
+	@echo "------------------------------------------------------------"
+	@echo "Make Options:"
 	@echo ""
-	@sed -n 's/^##/ -/p' $<
+	@sed -n 's/^##/ $(BASH_ESC)[31m  ->$(BASH_ESC)[0m/p' $< | column -t -s ':'
 	@echo ""
-	@echo "*Requried Tools:"
+	@echo "Requried Tools:"
 	@echo ""
 	@echo " - Verialtor     : Simulation"
 	@echo " - Gtkwave       : Used for viewing waveforms"
 	@echo ""
-	@echo "------------------------------------------------------------\n"
+	@echo "------------------------------------------------------------"

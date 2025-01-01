@@ -16,6 +16,7 @@
 #include <verilated_vcd_c.h>
 
 #define PERIOD  (5)
+#define AXIS_TIMEOUT  (10000)
 
 using namespace std;
 
@@ -139,18 +140,18 @@ int CFpgaSim::WaitSignal(CData &sig, uint32_t val, uint32_t timeout)
 ****************************************************************************/
 void CFpgaSim::PrintHeader(string str)
 {
-    cout << "\n==============================================" << endl;
-    cout << str << endl;
-    cout << "==============================================\n" << endl;
+    cout << endl << "====================================================" << endl;
+    cout << str;
+    cout << endl << "====================================================" << endl;
 }
 
 /** Testcase Header
 ****************************************************************************/
 void CFpgaSim::PrintTestHeader(string str)
 {
-    cout << "\n==============================================" << endl;
-    cout << "\033[1;33mTestcase: \033[1;0m" << str << endl;
-    cout << "==============================================\n" << endl;
+    cout << endl << "==============================================" << endl;
+    cout << "\033[1;33mTestcase: \033[1;0m" << str;
+    cout << endl << "==============================================" << endl;
 }
 
 /** Print simulation info
@@ -363,7 +364,7 @@ int CFpgaSim::AxiSetBit(uint32_t offset, uint32_t index, bool flag)
 
 /** Send Unencrypted message
 ****************************************************************************/
-int CFpgaSim::WriteAxiStream(const std::string& strMsg, int iTimeout)
+int CFpgaSim::WriteAxiStream(const std::string& strMsg)
 {
   const int CHUNKSIZE = 4; // 4 bytes is the default so it can fit in a 32bit register
   uint32_t u32Msg = 0;
@@ -372,7 +373,7 @@ int CFpgaSim::WriteAxiStream(const std::string& strMsg, int iTimeout)
   for (size_t i = 0; i < strMsg.size(); i+=CHUNKSIZE) {
     // Wait for AXI-Stream to be ready
     // NOTE: This function advances the clock by 1cc so you don't need the Run(1) function before writing data
-    if(WaitSignal(ptop->s_axis_tx_tready, 1, iTimeout) == -1){
+    if(WaitSignal(ptop->s_axis_tx_tready, 1, AXIS_TIMEOUT) == -1){
       // Transmission Failed
       return -1;
     }
@@ -394,10 +395,34 @@ int CFpgaSim::WriteAxiStream(const std::string& strMsg, int iTimeout)
   return 0;
 }
 
+/** Send Unencrypted message
+****************************************************************************/
+int CFpgaSim::WriteAxiStreamZeros(int len)
+{
+
+  // Split the string to 4 byte chunks and transmit over axi-stream
+  for (size_t i = 0; i < len; i+=1) {
+    // Wait for AXI-Stream to be ready
+    // NOTE: This function advances the clock by 1cc so you don't need the Run(1) function before writing data
+    if(WaitSignal(ptop->s_axis_tx_tready, 1, AXIS_TIMEOUT) == -1){
+      // Transmission Failed
+      return -1;
+    }
+
+    //Run(1);
+    ptop->s_axis_tx_tdata = 0x0;
+    ptop->s_axis_tx_tvalid = 1;
+  }
+  Run(1);
+  ptop->s_axis_tx_tvalid = 0;
+
+  return 0;
+}
+
 
 /** Receive Unencrypted message
 ****************************************************************************/
-sAxiStreamData CFpgaSim::ReadAxiStream(sAxiStreamInterface& sAxi, int timeout)
+sAxiStreamData CFpgaSim::ReadAxiStream(sAxiStreamInterface& sAxi)
 {
     int count = 0;
     int index = 0;
@@ -405,7 +430,7 @@ sAxiStreamData CFpgaSim::ReadAxiStream(sAxiStreamInterface& sAxi, int timeout)
     sAxiStreamData sData;
     sAxi.tready = 1;
     for (index = 0; index < 8; index++) {
-      if(WaitSignal(sAxi.tvalid, 1, timeout) == 0){
+      if(WaitSignal(sAxi.tvalid, 1, AXIS_TIMEOUT) == 0){
         sData.u32Sample[index] = sAxi.tdata;
       }
     }
@@ -417,7 +442,7 @@ sAxiStreamData CFpgaSim::ReadAxiStream(sAxiStreamInterface& sAxi, int timeout)
 
 /** Receive Unencrypted message as string
 ****************************************************************************/
-std::string CFpgaSim::ReadAxiStreamString(sAxiStreamInterface& sAxi, int iLength, int iTimeout)
+std::string CFpgaSim::ReadAxiStreamString(sAxiStreamInterface& sAxi, int iLength)
 {
     sAxiStreamData sData;
     string strRxData;
@@ -426,7 +451,7 @@ std::string CFpgaSim::ReadAxiStreamString(sAxiStreamInterface& sAxi, int iLength
       uint8_t  bytes[4];
     } uData;
 
-    sData = ReadAxiStream(sAxi, iTimeout);
+    sData = ReadAxiStream(sAxi);
     
     for (int w = 0; w < iLength/4; w++) {
       uData.value = sData.u32Sample[w];

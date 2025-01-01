@@ -11,8 +11,18 @@ class Vtb_fpga;
 
 // Encrypted Data Capture
 struct sAxiStreamData{
-    uint32_t u32Sample [16];  // [15:0]
+    uint32_t u32Sample [256];
 };
+
+
+// Register Map
+#define TX_AXI_OFFSET     0x0
+#define TX_AXI_CONTROL    TX_AXI_OFFSET+0x0
+#define TX_AXI_PRBS_SEED  TX_AXI_OFFSET+0x4
+
+#define RX_AXI_OFFSET     0x10000000
+#define RX_AXI_CONTROL    RX_AXI_OFFSET+0x0
+#define RX_AXI_PRBS_SEED  RX_AXI_OFFSET+0x4
 
 class CFpgaSim
 {
@@ -66,9 +76,10 @@ public:
   int  AxiSetBit(uint32_t offset, uint32_t index, bool flag);
   // Transmitter Module
   //sTxData  AxisTxCapture(int timeout);
-  int WriteAxiStream(const std::string& str, int iTimeout);
-  sAxiStreamData ReadAxiStream(sAxiStreamInterface& sAxi , int timeout);
-  std::string ReadAxiStreamString(sAxiStreamInterface& sAxi, int iLength, int iTimeout);
+  int WriteAxiStream(const std::string& str);
+  int WriteAxiStreamZeros(int len);
+  sAxiStreamData ReadAxiStream(sAxiStreamInterface& sAxi );
+  std::string ReadAxiStreamString(sAxiStreamInterface& sAxi, int iLength);
 };
 
 #endif // FPGA_SIM_H

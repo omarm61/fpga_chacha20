@@ -243,7 +243,7 @@ module tb_fpga (
   // --------------------------------------
   fifo_axis #(
       .C_FIFO_WIDTH(32),
-      .C_FIFO_DEPTH(8)
+      .C_FIFO_DEPTH(256)
   ) fifo_axis_rx_inst (
       // Clock/rese
       .i_aclk       (s_axi_aclk),
@@ -265,7 +265,7 @@ module tb_fpga (
   // --------------------------------------
   fifo_axis #(
       .C_FIFO_WIDTH(32),
-      .C_FIFO_DEPTH(8)
+      .C_FIFO_DEPTH(256)
   ) fifo_axis_encrypt_inst (
       // Clock/rese
       .i_aclk       (s_axi_aclk),
