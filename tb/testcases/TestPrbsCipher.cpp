@@ -9,6 +9,8 @@
 #include <ctype.h>
 #include <iostream>
 #include <fstream>
+#include <numeric>
+#include <vector>
 
 #include "Vtb_fpga.h"
 #include "../../tb/FpgaSim.h"
@@ -76,16 +78,20 @@ void CTestPrbsCipher::TestHelloWorld()
 void CTestPrbsCipher::TestKeyCorrelation()
 {
   sAxiStreamData sData;
-  sim.PrintInfo("--Key Correlation");
+  std::vector<int> x(256);
 
+  sim.PrintInfo("--Key Correlation");
   // Send a constant message
   // Write a stream of zeros, length 256 words
   sim.WriteAxiStreamZeros(256);
-  sData = sim.ReadAxiStream(sim.m_sAxiStreamRx.value());
+  sData = sim.ReadAxiStream(sim.m_sAxiStreamEncrypt.value(), 256);
+  iota(x.begin(), x.end(), 1);
 
+  printf("Data Length: %0d\n", size(sData.u32Sample));
   for (size_t i=0; i < 10; i++) {
-    printf("idx: %0d, Data : 0x%0x\n", i, sData.u32Sample[i]);
+    printf("idx: %0d, Data: %0u, x: %u\n", i, sData.u32Sample[i], x[i]);
   }
+
 
   // Capture the ciphered key stream
 

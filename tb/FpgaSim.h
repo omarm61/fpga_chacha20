@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <optional>
+#include <vector>
 #include "Vtb_fpga.h"
 
 class VerilatedVcdC;
@@ -11,7 +12,7 @@ class Vtb_fpga;
 
 // Encrypted Data Capture
 struct sAxiStreamData{
-    uint32_t u32Sample [256];
+  std::vector<uint32_t> u32Sample;
 };
 
 
@@ -77,8 +78,8 @@ public:
   // Transmitter Module
   //sTxData  AxisTxCapture(int timeout);
   int WriteAxiStream(const std::string& str);
-  int WriteAxiStreamZeros(int len);
-  sAxiStreamData ReadAxiStream(sAxiStreamInterface& sAxi );
+  int WriteAxiStreamZeros(int iLength);
+  sAxiStreamData ReadAxiStream(sAxiStreamInterface& sAxi, int iLength );
   std::string ReadAxiStreamString(sAxiStreamInterface& sAxi, int iLength);
 };
 
