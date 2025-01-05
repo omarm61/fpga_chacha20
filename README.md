@@ -72,7 +72,7 @@ Each cell is 32-bit wide.
 | Constant  | Constant | Constant | Constant |
 | Key       | Key      | Key      | Key      |
 | Key       | Key      | Key      | Key      |
-| Nonce     | Nonce    | Nonce    | 010101   |
+| Counter   | Nonce    | Nonce    | Nonce    |
 
 
 #### Simulation
