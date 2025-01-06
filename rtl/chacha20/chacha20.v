@@ -32,6 +32,7 @@ module chacha20 (
   // **Registers
   reg  [ 2:0] r_state;
   reg  [31:0] r_state_matrix           [                 0:15];
+  reg  [31:0] r_state_matrix_init      [                 0:15];
   reg  [ 4:0] r_round_counter;
 
   reg  [31:0] r_quarter_round_in_a     [0:NUM_QUARTER_ROUND-1];
@@ -46,12 +47,14 @@ module chacha20 (
   wire [31:0] w_quarter_round_out_c    [0:NUM_QUARTER_ROUND-1];
   wire [31:0] w_quarter_round_out_d    [0:NUM_QUARTER_ROUND-1];
   wire        w_quarter_round_out_valid[0:NUM_QUARTER_ROUND-1];
+  wire [31:0] w_keystream_adder        [                 0:15];
 
 
   always @(posedge i_aclk or negedge i_aresetn) begin
     if (i_aresetn == 1'b0) begin
       for (i = 0; i < 15; i = i + 1) begin
-        r_state_matrix <= 'd0;
+        r_state_matrix[i] <= 'd0;
+        r_state_matrix_init[i] <= 'd0;
       end
       for (i = 0; i < NUM_QUARTER_ROUND - 1; i = i + 1) begin
         r_quarter_round_in_a <= 'd0;
@@ -65,19 +68,29 @@ module chacha20 (
     end else begin
       case (r_state)
         STATE_START: begin
+          r_keystream_valid <= 1'b0;
           // initialize matrix
           // Constant
           r_state_matrix[0] <= 32'h61707865;
           r_state_matrix[1] <= 32'h3320646e;
           r_state_matrix[2] <= 32'h79622d32;
           r_state_matrix[3] <= 32'h6b206574;
+          r_state_matrix_init[0] <= 32'h61707865;
+          r_state_matrix_init[1] <= 32'h3320646e;
+          r_state_matrix_init[2] <= 32'h79622d32;
+          r_state_matrix_init[3] <= 32'h6b206574;
           // key
           r_state_matrix[4:11] <= i_key;
+          r_state_matrix_init[4:11] <= i_key;
           // Constant
           r_state_matrix[12] <= i_counter;
+          r_state_matrix_init[12] <= i_counter;
           // Nonce
           r_state_matrix[13:15] <= i_nonce;
+          r_state_matrix_init[13:15] <= i_nonce;
           // Start Cipher
+          // FIXME: check that next module is ready for next keystream before
+          // generating a new value
           if (i_start) begin
             r_round_counter <= 'd0;
             r_state <= STATE_CALC_COLUMN;
@@ -162,7 +175,13 @@ module chacha20 (
           end
 
         end
-        STATE_UPDATE_MATRIX: begin
+        STATE_OUTPUT_KEYSTREAM: begin
+          for (i = 0; i < 15; i = i + 1) begin
+            r_keystream_data[(32*i)+:32] <= w_keystream_adder[i];
+          end
+          r_keystream_valid <= 1'b1;
+          // Next State
+          r_state <= STATE_START;
 
         end
         default: r_state <= STATE_START;
@@ -171,7 +190,8 @@ module chacha20 (
   end
 
   generate
-    for (i_inst = 0; i_inst < NUM_QUARTER_ROUND - 1; i_inst = i_inst + 1) begin : gen_quarter_round
+    // Quarter Round
+    for (i_inst = 0; i_inst < NUM_QUARTER_ROUND; i_inst = i_inst + 1) begin : gen_quarter_round
       quarter_round #(
           .DATA_WIDTH(32)
       ) quarter_round_inst (
@@ -190,6 +210,23 @@ module chacha20 (
           .o_c      (w_quarter_round_out_c[i_inst]),
           .o_d      (w_quarter_round_out_d[i_inst]),
           .o_valid  (w_quarter_round_out_valid[i_inst])
+      );
+    end
+
+
+    // Adders used to combine the calculated cipher with inital state matrix
+    for (i_inst = 0; i_inst < 16; i_inst = i_inst + 1) begin : gen_keystream_adder
+      adder #(
+          .DATA_WIDTH(DATA_WIDTH)
+      ) adder_keystream (
+          // Clock, Reset
+          .i_aclk   (i_aclk),
+          .i_aresetn(i_aresetn),
+          // Input A + B
+          .i_a      (r_state_matrix[i_inst]),
+          .i_b      (r_state_matrix_init[i_inst]),
+          // Output
+          .o_output (w_keystream_adder[i_inst])
       );
     end
   endgenerate
