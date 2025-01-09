@@ -30,24 +30,27 @@ module chacha20 (
   localparam STATE_OUTPUT_KEYSTREAM = 3;
 
   // **Registers
-  reg  [ 2:0] r_state;
-  reg  [31:0] r_state_matrix           [                 0:15];
-  reg  [31:0] r_state_matrix_init      [                 0:15];
-  reg  [ 4:0] r_round_counter;
+  reg  [  2:0] r_state;
+  reg  [ 31:0] r_state_matrix           [                 0:15];
+  reg  [ 31:0] r_state_matrix_init      [                 0:15];
+  reg  [  4:0] r_round_counter;
 
-  reg  [31:0] r_quarter_round_in_a     [0:NUM_QUARTER_ROUND-1];
-  reg  [31:0] r_quarter_round_in_b     [0:NUM_QUARTER_ROUND-1];
-  reg  [31:0] r_quarter_round_in_c     [0:NUM_QUARTER_ROUND-1];
-  reg  [31:0] r_quarter_round_in_d     [0:NUM_QUARTER_ROUND-1];
-  reg         r_quarter_round_in_valid [0:NUM_QUARTER_ROUND-1];
+  reg  [ 31:0] r_quarter_round_in_a     [0:NUM_QUARTER_ROUND-1];
+  reg  [ 31:0] r_quarter_round_in_b     [0:NUM_QUARTER_ROUND-1];
+  reg  [ 31:0] r_quarter_round_in_c     [0:NUM_QUARTER_ROUND-1];
+  reg  [ 31:0] r_quarter_round_in_d     [0:NUM_QUARTER_ROUND-1];
+  reg          r_quarter_round_in_valid [0:NUM_QUARTER_ROUND-1];
+
+  reg          r_keystream_valid;
+  reg  [511:0] r_keystream_data;
 
   // **Wires
-  wire [31:0] w_quarter_round_out_a    [0:NUM_QUARTER_ROUND-1];
-  wire [31:0] w_quarter_round_out_b    [0:NUM_QUARTER_ROUND-1];
-  wire [31:0] w_quarter_round_out_c    [0:NUM_QUARTER_ROUND-1];
-  wire [31:0] w_quarter_round_out_d    [0:NUM_QUARTER_ROUND-1];
-  wire        w_quarter_round_out_valid[0:NUM_QUARTER_ROUND-1];
-  wire [31:0] w_keystream_adder        [                 0:15];
+  wire [ 31:0] w_quarter_round_out_a    [0:NUM_QUARTER_ROUND-1];
+  wire [ 31:0] w_quarter_round_out_b    [0:NUM_QUARTER_ROUND-1];
+  wire [ 31:0] w_quarter_round_out_c    [0:NUM_QUARTER_ROUND-1];
+  wire [ 31:0] w_quarter_round_out_d    [0:NUM_QUARTER_ROUND-1];
+  wire         w_quarter_round_out_valid[0:NUM_QUARTER_ROUND-1];
+  wire [ 31:0] w_keystream_adder        [                 0:15];
 
 
   always @(posedge i_aclk or negedge i_aresetn) begin
@@ -57,11 +60,11 @@ module chacha20 (
         r_state_matrix_init[i] <= 'd0;
       end
       for (i = 0; i < NUM_QUARTER_ROUND - 1; i = i + 1) begin
-        r_quarter_round_in_a <= 'd0;
-        r_quarter_round_in_b <= 'd0;
-        r_quarter_round_in_c <= 'd0;
-        r_quarter_round_in_d <= 'd0;
-        r_quarter_round_in_valid <= 1'b0;
+        r_quarter_round_in_a[i] <= 'd0;
+        r_quarter_round_in_b[i] <= 'd0;
+        r_quarter_round_in_c[i] <= 'd0;
+        r_quarter_round_in_d[i] <= 'd0;
+        r_quarter_round_in_valid[i] <= 1'b0;
       end
       r_state <= STATE_START;
       r_round_counter <= 'd0;
@@ -80,14 +83,18 @@ module chacha20 (
           r_state_matrix_init[2] <= 32'h79622d32;
           r_state_matrix_init[3] <= 32'h6b206574;
           // key
-          r_state_matrix[4:11] <= i_key;
-          r_state_matrix_init[4:11] <= i_key;
+          for (i = 0; i < 8; i = i + 1) begin
+            r_state_matrix[4+i] <= i_key[32*i+:32];
+            r_state_matrix_init[4+i] <= i_key[32*i+:32];
+          end
           // Constant
           r_state_matrix[12] <= i_counter;
           r_state_matrix_init[12] <= i_counter;
           // Nonce
-          r_state_matrix[13:15] <= i_nonce;
-          r_state_matrix_init[13:15] <= i_nonce;
+          for (i = 0; i < 3; i = i + 1) begin
+            r_state_matrix[13+i] <= i_nonce[32*i+:32];
+            r_state_matrix_init[13+i] <= i_nonce[32*i+:32];
+          end
           // Start Cipher
           // FIXME: check that next module is ready for next keystream before
           // generating a new value
@@ -97,26 +104,26 @@ module chacha20 (
           end
         end
         STATE_CALC_COLUMN: begin
-          for (i = 0; i < NUM_QUARTER_ROUND - 1; i = i + 1) begin
-            r_quarter_round_in_a[i] <= r_state_matrix[0+i];
-            r_quarter_round_in_b[i] <= r_state_matrix[4+i];
-            r_quarter_round_in_c[i] <= r_state_matrix[8+i];
-            r_quarter_round_in_d[i] <= r_state_matrix[12+i];
-          end
 
           // Wait for quarter round to complete
           if (w_quarter_round_out_valid[0:3] == 4'b1111) begin
             // Update state matrix
-            for (i = 0; i < NUM_QUARTER_ROUND - 1; i = i + 1) begin
-              r_state_matrix[0+i]  <= w_quarter_round_out_a[i];
-              r_state_matrix[4+i]  <= w_quarter_round_out_b[i];
-              r_state_matrix[8+i]  <= w_quarter_round_out_c[i];
+            for (i = 0; i < NUM_QUARTER_ROUND; i = i + 1) begin
+              r_state_matrix[0+i] <= w_quarter_round_out_a[i];
+              r_state_matrix[4+i] <= w_quarter_round_out_b[i];
+              r_state_matrix[8+i] <= w_quarter_round_out_c[i];
               r_state_matrix[12+i] <= w_quarter_round_out_d[i];
+              r_quarter_round_in_valid[i] <= 1'b0;
             end
-            r_quarter_round_in_valid[0:3] <= 4'b0000;
             r_state <= STATE_CALC_DIAGNOAL;
           end else begin
-            r_quarter_round_in_valid[0:3] <= 4'b1111;
+            for (i = 0; i < NUM_QUARTER_ROUND; i = i + 1) begin
+              r_quarter_round_in_a[i] <= r_state_matrix[0+i];
+              r_quarter_round_in_b[i] <= r_state_matrix[4+i];
+              r_quarter_round_in_c[i] <= r_state_matrix[8+i];
+              r_quarter_round_in_d[i] <= r_state_matrix[12+i];
+              r_quarter_round_in_valid[i] <= 1'b1;
+            end
           end
         end
         STATE_CALC_DIAGNOAL: begin
@@ -171,7 +178,9 @@ module chacha20 (
               r_state <= STATE_CALC_COLUMN;
             end
           end else begin
-            r_quarter_round_in_valid[0:3] <= 4'b1111;
+            for (i = 0; i < 3; i = i + 1) begin
+              r_quarter_round_in_valid[i] <= 1'b1;
+            end
           end
 
         end
@@ -217,7 +226,7 @@ module chacha20 (
     // Adders used to combine the calculated cipher with inital state matrix
     for (i_inst = 0; i_inst < 16; i_inst = i_inst + 1) begin : gen_keystream_adder
       adder #(
-          .DATA_WIDTH(DATA_WIDTH)
+          .DATA_WIDTH(32)
       ) adder_keystream (
           // Clock, Reset
           .i_aclk   (i_aclk),

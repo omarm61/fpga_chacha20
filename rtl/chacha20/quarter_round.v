@@ -27,7 +27,7 @@ module quarter_round #(
   localparam STATE_CALC_CB2 = 5;
 
   // **Registers
-  reg [$clog(STATE_CALC_CB2):0] r_state;
+  reg [$clog2(STATE_CALC_CB2):0] r_state;
 
   reg r_valid;
   reg [31:0] r_a_in;

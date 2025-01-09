@@ -43,17 +43,20 @@ module tx #(
 
 
   // **Wires
-  wire [31:0] w_prbs_out;
-  wire        w_reg_tx_enable;
-  wire        w_reg_prbs_reload;
-  wire        w_prbs_run;
-  wire [31:0] w_reg_prbs_seed;
+  wire [ 31:0] w_prbs_out;
+  wire         w_reg_tx_enable;
+  wire         w_reg_prbs_reload;
+  wire         w_prbs_run;
+  wire [ 31:0] w_reg_prbs_seed;
+
+  wire [511:0] w_keystream_test;
+  wire         w_keystream_valid;
 
   // **Registers
-  reg         r_axis_tvalid;
-  reg         r_axis_sof;
-  reg  [31:0] r_axis_tdata;
-  reg         r_reg_tx_enable_d;
+  reg          r_axis_tvalid;
+  reg          r_axis_sof;
+  reg  [ 31:0] r_axis_tdata;
+  reg          r_reg_tx_enable_d;
 
   // Assignment
   assign m_axis_tvalid = r_axis_tvalid;
@@ -109,6 +112,27 @@ module tx #(
       .i_prbs_reload(w_reg_prbs_reload),
       .i_prbs_seed  (w_reg_prbs_seed),
       .o_prbs       (w_prbs_out)
+  );
+
+  // -----------------------
+  // ChaCha20 Cipher
+  // -----------------------
+  chacha20 chacha20_inst (
+      // Clock, Reset
+      .i_aclk(s_axi_aclk),
+      .i_aresetn(s_axi_aresetn),
+      // Control
+      .i_enable(w_reg_tx_enable),
+      .i_start(w_reg_tx_enable),
+      // Key
+      .i_key(256'h11111111111111111111111111111111),
+      // Nonce
+      .i_nonce(96'h111111111111),
+      // Counter
+      .i_counter(32'h0),
+      // Output Cipher
+      .o_keystream(w_keystream_test),
+      .o_keystream_valid(w_keystream_valid)
   );
 
 

@@ -14,7 +14,7 @@ module adder #(
 
 
   // **Registers
-  reg [DATA_WIDTH] r_output;
+  reg [DATA_WIDTH-1:0] r_output;
 
   assign o_output = r_output;
 
