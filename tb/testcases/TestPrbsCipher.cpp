@@ -69,7 +69,7 @@ void CTestPrbsCipher::TestHelloWorld()
   std::string rxMsg = sim.ReadAxiStreamString(sim.m_sAxiStreamRx.value(), txMsg.length());
   printf("-->> Rx Message: %s \n", rxMsg.c_str());
 
-  sim.ValidateString(txMsg, rxMsg, "Tx/Rx Hello World");
+  sim.ValidateString(txMsg, rxMsg, "PRBS Encryption: Hello World!");
 }
 
 
@@ -91,7 +91,6 @@ void CTestPrbsCipher::TestKeyCorrelation()
   for (size_t i=0; i < 10; i++) {
     printf("idx: %0d, Data: %0u, x: %u\n", i, sData.u32Sample[i], x[i]);
   }
-
 
   // Capture the ciphered key stream
 

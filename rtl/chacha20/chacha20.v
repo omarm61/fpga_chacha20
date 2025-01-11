@@ -22,35 +22,37 @@ module chacha20 (
 
   // **Parameters
   localparam NUM_QUARTER_ROUND = 4;
-  localparam NUM_ROUNDS = 10;
+  localparam NUM_ROUNDS        = 10;
 
-  localparam STATE_START = 0;
-  localparam STATE_CALC_COLUMN = 1;
-  localparam STATE_CALC_DIAGNOAL = 2;
-  localparam STATE_OUTPUT_KEYSTREAM = 3;
+  localparam STATE_START              = 0;
+  localparam STATE_CALC_COLUMN_REQ    = 1;
+  localparam STATE_CALC_COLUMN_WAIT   = 2;
+  localparam STATE_CALC_DIAGNOAL_REQ  = 3;
+  localparam STATE_CALC_DIAGNOAL_WAIT = 4;
+  localparam STATE_OUTPUT_KEYSTREAM   = 5;
 
   // **Registers
-  reg  [  2:0] r_state;
-  reg  [ 31:0] r_state_matrix           [                 0:15];
-  reg  [ 31:0] r_state_matrix_init      [                 0:15];
-  reg  [  4:0] r_round_counter;
+  reg [$clog2(STATE_OUTPUT_KEYSTREAM):0] r_state;
+  reg [31:0] r_state_matrix      [0:15];
+  reg [31:0] r_state_matrix_init [0:15];
+  reg [ 4:0] r_round_counter;
 
-  reg  [ 31:0] r_quarter_round_in_a     [0:NUM_QUARTER_ROUND-1];
-  reg  [ 31:0] r_quarter_round_in_b     [0:NUM_QUARTER_ROUND-1];
-  reg  [ 31:0] r_quarter_round_in_c     [0:NUM_QUARTER_ROUND-1];
-  reg  [ 31:0] r_quarter_round_in_d     [0:NUM_QUARTER_ROUND-1];
-  reg          r_quarter_round_in_valid [0:NUM_QUARTER_ROUND-1];
-
+  reg  [31:0] r_quarter_round_in_a     [0:NUM_QUARTER_ROUND-1];
+  reg  [31:0] r_quarter_round_in_b     [0:NUM_QUARTER_ROUND-1];
+  reg  [31:0] r_quarter_round_in_c     [0:NUM_QUARTER_ROUND-1];
+  reg  [31:0] r_quarter_round_in_d     [0:NUM_QUARTER_ROUND-1];
+  reg  [NUM_QUARTER_ROUND-1:0] r_quarter_round_in_valid;
   reg          r_keystream_valid;
   reg  [511:0] r_keystream_data;
 
   // **Wires
-  wire [ 31:0] w_quarter_round_out_a    [0:NUM_QUARTER_ROUND-1];
-  wire [ 31:0] w_quarter_round_out_b    [0:NUM_QUARTER_ROUND-1];
-  wire [ 31:0] w_quarter_round_out_c    [0:NUM_QUARTER_ROUND-1];
-  wire [ 31:0] w_quarter_round_out_d    [0:NUM_QUARTER_ROUND-1];
-  wire         w_quarter_round_out_valid[0:NUM_QUARTER_ROUND-1];
-  wire [ 31:0] w_keystream_adder        [                 0:15];
+  wire [31:0] w_quarter_round_out_a    [0:NUM_QUARTER_ROUND-1];
+  wire [31:0] w_quarter_round_out_b    [0:NUM_QUARTER_ROUND-1];
+  wire [31:0] w_quarter_round_out_c    [0:NUM_QUARTER_ROUND-1];
+  wire [31:0] w_quarter_round_out_d    [0:NUM_QUARTER_ROUND-1];
+  wire [NUM_QUARTER_ROUND-1:0] w_quarter_round_out_valid;
+  wire [NUM_QUARTER_ROUND-1:0] w_quarter_round_out_busy;
+  wire [31:0] w_keystream_adder        [0:15];
 
 
   always @(posedge i_aclk or negedge i_aresetn) begin
@@ -100,24 +102,13 @@ module chacha20 (
           // generating a new value
           if (i_start) begin
             r_round_counter <= 'd0;
-            r_state <= STATE_CALC_COLUMN;
+            r_state <= STATE_CALC_COLUMN_REQ;
           end
         end
-        STATE_CALC_COLUMN: begin
-
-          // Wait for quarter round to complete
-          if (w_quarter_round_out_valid[0:3] == 4'b1111) begin
-            // Update state matrix
-            for (i = 0; i < NUM_QUARTER_ROUND; i = i + 1) begin
-              r_state_matrix[0+i] <= w_quarter_round_out_a[i];
-              r_state_matrix[4+i] <= w_quarter_round_out_b[i];
-              r_state_matrix[8+i] <= w_quarter_round_out_c[i];
-              r_state_matrix[12+i] <= w_quarter_round_out_d[i];
-              r_quarter_round_in_valid[i] <= 1'b0;
-            end
-            r_state <= STATE_CALC_DIAGNOAL;
-          end else begin
-            for (i = 0; i < NUM_QUARTER_ROUND; i = i + 1) begin
+        STATE_CALC_COLUMN_REQ: begin
+          // Request a new column calculation
+          for (i = 0; i < NUM_QUARTER_ROUND; i = i + 1) begin
+            if (w_quarter_round_out_busy[i] == 1'b0) begin
               r_quarter_round_in_a[i] <= r_state_matrix[0+i];
               r_quarter_round_in_b[i] <= r_state_matrix[4+i];
               r_quarter_round_in_c[i] <= r_state_matrix[8+i];
@@ -125,67 +116,110 @@ module chacha20 (
               r_quarter_round_in_valid[i] <= 1'b1;
             end
           end
+          // Next state
+          if (r_quarter_round_in_valid[3:0] == 4'b1111) begin
+            r_state <= STATE_CALC_COLUMN_WAIT;
+          end
         end
-        STATE_CALC_DIAGNOAL: begin
-          // a
-          for (i = 0; i < NUM_QUARTER_ROUND - 1; i = i + 1) begin
-            r_quarter_round_in_a[i] <= r_state_matrix[0+i];
-          end
-          // b
-          r_quarter_round_in_b[0] <= r_state_matrix[5];
-          r_quarter_round_in_b[1] <= r_state_matrix[6];
-          r_quarter_round_in_b[2] <= r_state_matrix[7];
-          r_quarter_round_in_b[3] <= r_state_matrix[4];
-          // c
-          r_quarter_round_in_c[0] <= r_state_matrix[10];
-          r_quarter_round_in_c[1] <= r_state_matrix[11];
-          r_quarter_round_in_c[2] <= r_state_matrix[8];
-          r_quarter_round_in_c[3] <= r_state_matrix[9];
-          // d
-          r_quarter_round_in_d[0] <= r_state_matrix[15];
-          r_quarter_round_in_d[1] <= r_state_matrix[12];
-          r_quarter_round_in_d[2] <= r_state_matrix[13];
-          r_quarter_round_in_d[3] <= r_state_matrix[14];
-
-          // Wait for quarter round to complete
-          if (w_quarter_round_out_valid[0:3] == 4'b1111) begin
+        STATE_CALC_COLUMN_WAIT: begin
+          // Wait for the quarter round to output valid data
             // Update state matrix
-            for (i = 0; i < NUM_QUARTER_ROUND - 1; i = i + 1) begin
-              r_state_matrix[0+i] <= w_quarter_round_out_a[i];
+            for (i = 0; i < NUM_QUARTER_ROUND; i = i + 1) begin
+              if (w_quarter_round_out_valid[i] == 1'b1) begin
+                r_state_matrix[0+i] <= w_quarter_round_out_a[i];
+                r_state_matrix[4+i] <= w_quarter_round_out_b[i];
+                r_state_matrix[8+i] <= w_quarter_round_out_c[i];
+                r_state_matrix[12+i] <= w_quarter_round_out_d[i];
+                r_quarter_round_in_valid[i] <= 1'b0;
+              end
             end
-            //b
-            r_state_matrix[5] <= w_quarter_round_out_b[0];
-            r_state_matrix[6] <= w_quarter_round_out_b[1];
-            r_state_matrix[7] <= w_quarter_round_out_b[2];
-            r_state_matrix[4] <= w_quarter_round_out_b[3];
-            //c
-            r_state_matrix[10] <= w_quarter_round_out_c[0];
-            r_state_matrix[11] <= w_quarter_round_out_c[1];
-            r_state_matrix[8] <= w_quarter_round_out_c[2];
-            r_state_matrix[9] <= w_quarter_round_out_c[3];
-            //d
-            r_state_matrix[15] <= w_quarter_round_out_d[0];
-            r_state_matrix[12] <= w_quarter_round_out_d[1];
-            r_state_matrix[13] <= w_quarter_round_out_d[2];
-            r_state_matrix[14] <= w_quarter_round_out_d[3];
 
-            r_quarter_round_in_valid[0:3] <= 4'b0000;
-            if (r_round_counter >= NUM_ROUNDS) begin
-              r_round_counter <= 'd0;
-              r_state <= STATE_OUTPUT_KEYSTREAM;
-            end else begin
-              r_round_counter <= r_round_counter + 1;
-              r_state <= STATE_CALC_COLUMN;
+            // Move to next state if all quarter rounds are done
+            if (w_quarter_round_out_valid[3:0] == 4'b1111) begin
+              r_state <= STATE_CALC_DIAGNOAL_REQ;
             end
-          end else begin
-            for (i = 0; i < 3; i = i + 1) begin
-              r_quarter_round_in_valid[i] <= 1'b1;
+        end
+        STATE_CALC_DIAGNOAL_REQ: begin
+            // a
+            for (i = 0; i < NUM_QUARTER_ROUND; i = i + 1) begin
+              if (w_quarter_round_out_busy[i] == 1'b0) begin
+                r_quarter_round_in_a[i] <= r_state_matrix[0+i];
+                r_quarter_round_in_valid[i] <= 1'b1;
+                case(i)
+                  0: begin
+                    r_quarter_round_in_b[0] <= r_state_matrix[5];
+                    r_quarter_round_in_c[0] <= r_state_matrix[10];
+                    r_quarter_round_in_d[0] <= r_state_matrix[15];
+                  end
+                  1: begin
+                    r_quarter_round_in_b[1] <= r_state_matrix[6];
+                    r_quarter_round_in_c[1] <= r_state_matrix[11];
+                    r_quarter_round_in_d[1] <= r_state_matrix[12];
+                  end
+                  2: begin
+                    r_quarter_round_in_b[2] <= r_state_matrix[7];
+                    r_quarter_round_in_c[2] <= r_state_matrix[8];
+                    r_quarter_round_in_d[2] <= r_state_matrix[13];
+                  end
+                  3: begin
+                    r_quarter_round_in_b[3] <= r_state_matrix[4];
+                    r_quarter_round_in_c[3] <= r_state_matrix[9];
+                    r_quarter_round_in_d[3] <= r_state_matrix[14];
+                  end
+                  default: r_quarter_round_in_valid[i] <= 1'b0;
+                endcase
+              end
             end
-          end
+            // Next State
+            if (r_quarter_round_in_valid[3:0] == 4'b1111) begin
+              r_state <= STATE_CALC_DIAGNOAL_WAIT;
+            end
+        end
+        STATE_CALC_DIAGNOAL_WAIT: begin
+            // Update state matrix
+            for (i = 0; i < NUM_QUARTER_ROUND; i = i + 1) begin
+              // Wait for quarter round to complete
+              if (w_quarter_round_out_valid[i] == 1'b1) begin
+                r_state_matrix[0+i] <= w_quarter_round_out_a[i];
+                r_quarter_round_in_valid[i] <= 1'b0;
+                case(i)
+                  0: begin
+                    r_state_matrix[5] <= w_quarter_round_out_b[0];
+                    r_state_matrix[10] <= w_quarter_round_out_c[0];
+                    r_state_matrix[15] <= w_quarter_round_out_d[0];
+                  end
+                  1: begin
+                    r_state_matrix[6] <= w_quarter_round_out_b[1];
+                    r_state_matrix[11] <= w_quarter_round_out_c[1];
+                    r_state_matrix[12] <= w_quarter_round_out_d[1];
+                  end
+                  2: begin
+                    r_state_matrix[7] <= w_quarter_round_out_b[2];
+                    r_state_matrix[8] <= w_quarter_round_out_c[2];
+                    r_state_matrix[13] <= w_quarter_round_out_d[2];
+                  end
+                  3: begin
+                    r_state_matrix[4] <= w_quarter_round_out_b[3];
+                    r_state_matrix[9] <= w_quarter_round_out_c[3];
+                    r_state_matrix[14] <= w_quarter_round_out_d[3];
+                  end
+                  default: r_quarter_round_in_valid[i] <= 1'b0;
+                endcase
+              end
+            end
 
+            if (w_quarter_round_out_valid[3:0] == 4'b1111) begin
+              if (r_round_counter >= NUM_ROUNDS-1) begin
+                r_round_counter <= 'd0;
+                r_state <= STATE_OUTPUT_KEYSTREAM;
+              end else begin
+                r_round_counter <= r_round_counter + 1;
+                r_state <= STATE_CALC_COLUMN_REQ;
+              end
+            end
         end
         STATE_OUTPUT_KEYSTREAM: begin
-          for (i = 0; i < 15; i = i + 1) begin
+          for (i = 0; i < 16; i = i + 1) begin
             r_keystream_data[(32*i)+:32] <= w_keystream_adder[i];
           end
           r_keystream_valid <= 1'b1;
@@ -218,7 +252,8 @@ module chacha20 (
           .o_b      (w_quarter_round_out_b[i_inst]),
           .o_c      (w_quarter_round_out_c[i_inst]),
           .o_d      (w_quarter_round_out_d[i_inst]),
-          .o_valid  (w_quarter_round_out_valid[i_inst])
+          .o_valid  (w_quarter_round_out_valid[i_inst]),
+          .o_busy   (w_quarter_round_out_busy[i_inst])
       );
     end
 

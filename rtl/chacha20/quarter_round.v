@@ -16,15 +16,16 @@ module quarter_round #(
     output wire [DATA_WIDTH-1:0] o_b,
     output wire [DATA_WIDTH-1:0] o_c,
     output wire [DATA_WIDTH-1:0] o_d,
-    output wire                  o_valid
+    output wire                  o_valid,
+    output wire                  o_busy
 );
 
   // **Parameters
-  localparam STATE_START = 1;
-  localparam STATE_CALC_AD1 = 2;
-  localparam STATE_CALC_CB1 = 3;
-  localparam STATE_CALC_AD2 = 4;
-  localparam STATE_CALC_CB2 = 5;
+  localparam STATE_START = 0;
+  localparam STATE_CALC_AD1 = 1;
+  localparam STATE_CALC_CB1 = 2;
+  localparam STATE_CALC_AD2 = 3;
+  localparam STATE_CALC_CB2 = 4;
 
   // **Registers
   reg [$clog2(STATE_CALC_CB2):0] r_state;
@@ -38,6 +39,7 @@ module quarter_round #(
   reg [31:0] r_b_out;
   reg [31:0] r_c_out;
   reg [31:0] r_d_out;
+  reg r_busy;
 
   // **Wires
   wire [31:0] w_a1;
@@ -59,6 +61,7 @@ module quarter_round #(
   assign o_c = r_c_out;
   assign o_d = r_d_out;
   assign o_valid = r_valid;
+  assign o_busy = r_busy;
 
   // FSM
   // STATE_WAIT: Wait for next round of data
@@ -74,6 +77,7 @@ module quarter_round #(
       r_b_in  <= 32'd0;
       r_c_in  <= 32'd0;
       r_d_in  <= 32'd0;
+      r_busy <= 1'b0;
     end else begin
       case (r_state)
         STATE_START: begin
@@ -84,6 +88,9 @@ module quarter_round #(
             r_b_in  <= i_b;
             r_c_in  <= i_c;
             r_d_in  <= i_d;
+            r_busy <= 1'b1;
+          end else begin
+            r_busy <= 1'b0;
           end
           r_valid <= 1'b0;
         end
@@ -91,17 +98,18 @@ module quarter_round #(
         STATE_CALC_CB1: r_state <= STATE_CALC_AD2;
         STATE_CALC_AD2: r_state <= STATE_CALC_CB2;
         STATE_CALC_CB2: begin
-          r_valid <= 1'b1;
           r_a_out <= w_a2;
           r_b_out <= w_b2_lshift;
           r_c_out <= w_c2;
           r_d_out <= w_d2_lshift;
+          r_valid <= 1'b1;
           if (i_valid == 1'b0) begin
-            r_state <= STATE_CALC_AD1;
+            r_busy <= 1'b0;
+            r_state <= STATE_START;
           end
         end
         default: begin
-          r_state <= STATE_CALC_AD1;
+          r_state <= STATE_START;
           r_valid <= 1'b0;
         end
       endcase
