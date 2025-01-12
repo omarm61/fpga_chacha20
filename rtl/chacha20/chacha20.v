@@ -3,8 +3,10 @@ module chacha20 (
     input wire i_aclk,
     input wire i_aresetn,
     // Control
-    input wire i_enable,
-    input wire i_start,
+    input wire i_keystream_req,   // Request new key
+    input wire i_key_reload,   // Request new key
+    // Status
+    output wire o_busy,
     // Key
     input wire [255:0] i_key,
     // Nonce
@@ -43,7 +45,8 @@ module chacha20 (
   reg  [31:0] r_quarter_round_in_d     [0:NUM_QUARTER_ROUND-1];
   reg  [NUM_QUARTER_ROUND-1:0] r_quarter_round_in_valid;
   reg          r_keystream_valid;
-  reg  [511:0] r_keystream_data;
+  reg  [511:0] r_keystream;
+  reg          r_busy;
 
   // **Wires
   wire [31:0] w_quarter_round_out_a    [0:NUM_QUARTER_ROUND-1];
@@ -53,6 +56,12 @@ module chacha20 (
   wire [NUM_QUARTER_ROUND-1:0] w_quarter_round_out_valid;
   wire [NUM_QUARTER_ROUND-1:0] w_quarter_round_out_busy;
   wire [31:0] w_keystream_adder        [0:15];
+
+
+  // Assignments
+  assign o_busy = r_busy;
+  assign o_keystream = r_keystream;
+  assign o_keystream_valid = r_keystream_valid;
 
 
   always @(posedge i_aclk or negedge i_aresetn) begin
@@ -70,38 +79,42 @@ module chacha20 (
       end
       r_state <= STATE_START;
       r_round_counter <= 'd0;
+      r_keystream <= 'd0;
+      r_keystream_valid <= 1'b0;
+      r_busy <= 1'b0;
     end else begin
       case (r_state)
         STATE_START: begin
           r_keystream_valid <= 1'b0;
           // initialize matrix
           // Constant
-          r_state_matrix[0] <= 32'h61707865;
-          r_state_matrix[1] <= 32'h3320646e;
-          r_state_matrix[2] <= 32'h79622d32;
-          r_state_matrix[3] <= 32'h6b206574;
-          r_state_matrix_init[0] <= 32'h61707865;
-          r_state_matrix_init[1] <= 32'h3320646e;
-          r_state_matrix_init[2] <= 32'h79622d32;
-          r_state_matrix_init[3] <= 32'h6b206574;
-          // key
-          for (i = 0; i < 8; i = i + 1) begin
-            r_state_matrix[4+i] <= i_key[32*i+:32];
-            r_state_matrix_init[4+i] <= i_key[32*i+:32];
-          end
-          // Constant
-          r_state_matrix[12] <= i_counter;
-          r_state_matrix_init[12] <= i_counter;
-          // Nonce
-          for (i = 0; i < 3; i = i + 1) begin
-            r_state_matrix[13+i] <= i_nonce[32*i+:32];
-            r_state_matrix_init[13+i] <= i_nonce[32*i+:32];
+          if (i_key_reload == 1'b1) begin
+            r_state_matrix[0] <= 32'h61707865;
+            r_state_matrix[1] <= 32'h3320646e;
+            r_state_matrix[2] <= 32'h79622d32;
+            r_state_matrix[3] <= 32'h6b206574;
+            r_state_matrix_init[0] <= 32'h61707865;
+            r_state_matrix_init[1] <= 32'h3320646e;
+            r_state_matrix_init[2] <= 32'h79622d32;
+            r_state_matrix_init[3] <= 32'h6b206574;
+            // key
+            for (i = 0; i < 8; i = i + 1) begin
+              r_state_matrix[4+i] <= i_key[32*i+:32];
+              r_state_matrix_init[4+i] <= i_key[32*i+:32];
+            end
+            // Constant
+            r_state_matrix[12] <= i_counter;
+            r_state_matrix_init[12] <= i_counter;
+            // Nonce
+            for (i = 0; i < 3; i = i + 1) begin
+              r_state_matrix[13+i] <= i_nonce[32*i+:32];
+              r_state_matrix_init[13+i] <= i_nonce[32*i+:32];
+            end
           end
           // Start Cipher
-          // FIXME: check that next module is ready for next keystream before
-          // generating a new value
-          if (i_start) begin
+          if (i_keystream_req) begin
             r_round_counter <= 'd0;
+            r_busy <= 1'b1;
             r_state <= STATE_CALC_COLUMN_REQ;
           end
         end
@@ -220,9 +233,10 @@ module chacha20 (
         end
         STATE_OUTPUT_KEYSTREAM: begin
           for (i = 0; i < 16; i = i + 1) begin
-            r_keystream_data[(32*i)+:32] <= w_keystream_adder[i];
+            r_keystream[(32*i)+:32] <= w_keystream_adder[i];
           end
           r_keystream_valid <= 1'b1;
+          r_busy <= 1'b0;
           // Next State
           r_state <= STATE_START;
 

@@ -9,12 +9,16 @@ module tx_axi_slave #(
     // Width of S_AXI address bus
     parameter integer C_S_AXI_ADDR_WIDTH = 4
 ) (
-    // Users to add ports here
+
     // Control Registers
-    output wire        o_reg_tx_enable,
-    output wire        o_reg_prbs_reload,
-    output wire [31:0] o_reg_prbs_seed,
-    // Do not modify the ports beyond this line
+    output wire         o_reg_tx_enable,
+    output wire         o_reg_key_reload,
+    output wire [31:0]  o_reg_prbs_seed,
+    output wire [255:0] o_reg_chacha20_key,
+    output wire [ 95:0] o_reg_chacha20_nonce,
+    // Status Registers
+    input  wire [31:0]  i_chacha20_counter,
+    input  wire         i_chacha20_error,
 
     // Global Clock Signal
     input wire S_AXI_ACLK,
@@ -221,6 +225,10 @@ module tx_axi_slave #(
       if (slv_reg[0][1] == 1'b1) begin
         slv_reg[0][1] <= 1'b0;
       end
+      // Status register
+      slv_reg[2][0] <= i_chacha20_error;
+      slv_reg[2][31:16] <= 16'hdead;
+      slv_reg[3] <= i_chacha20_counter;
     end
   end
 
@@ -325,7 +333,7 @@ module tx_axi_slave #(
   // Add user logic here
   // Control signals
   assign o_reg_tx_enable   = slv_reg[0][0];
-  assign o_reg_prbs_reload = slv_reg[0][1];
+  assign o_reg_key_reload  = slv_reg[0][1];
   assign o_reg_prbs_seed   = slv_reg[1];
 
 
