@@ -7,6 +7,7 @@ TB_NAME = tb_fpga
 CPP_FILE = ../tb/sim_top.cpp
 CPP_FILE += ../tb/FpgaSim.cpp
 CPP_FILE += ../tb/testcases/TestPrbsCipher.cpp
+CPP_FILE += ../tb/testcases/TestChaCha20.cpp
 
 # Top Level FPGA testbench, contains all the RTL routing
 TB_TOP = ../tb/tb_fpga.sv

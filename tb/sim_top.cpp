@@ -14,6 +14,7 @@
 #include "Vtb_fpga.h"
 #include "../../tb/FpgaSim.h"
 #include "../../tb/testcases/TestPrbsCipher.h"
+#include "../../tb/testcases/TestChaCha20.h"
 
 
 using namespace std;
@@ -42,6 +43,7 @@ int main(int argc, char** argv)
 
   // Initiate test suites 
   CTestPrbsCipher   m_TestPrbsCipher(m_Sim);
+  CTestChaCha20   m_TestChaCha20(m_Sim);
 
   int opt;
   while ((opt = getopt(argc, argv, "tv:")) != -1)
@@ -68,6 +70,8 @@ int main(int argc, char** argv)
 
   // PRBS Test Suite
   m_TestPrbsCipher.RunTestSuite(seed);
+  // ChaCha20
+  m_TestChaCha20.RunTestSuite(seed);
 
 
 

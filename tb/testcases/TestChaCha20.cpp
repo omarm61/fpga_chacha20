@@ -14,30 +14,35 @@
 
 #include "Vtb_fpga.h"
 #include "../../tb/FpgaSim.h"
-#include "../../tb/testcases/TestPrbsCipher.h"
+#include "../../tb/testcases/TestChaCha20.h"
 
 using namespace std;
 
 /** Configure Tx
 ****************************************************************************/
-void CTestPrbsCipher::ConfigureTx(uint32_t &seed)
+void CTestChaCha20::ConfigureTx(uint32_t u32KeyArray[], uint32_t u32NonceArray[])
 {
   uint32_t rdata = 0;
   // --------------
   // Configure TX
   // --------------
-  // Write SEED and enable module
-  sim.AxiWrite(TX_AXI_PRBS_SEED, seed); // Write PRBS seed 
+  // Load Key
+  for (size_t i = 0; i < 8; i++) {
+    sim.AxiWrite(TX_AXI_CHACHA20_KEY1 + (0x4*i), u32KeyArray[i]);
+  }
+  // Load Nonce
+  for (size_t i = 0; i < 3; i++) {
+    sim.AxiWrite(TX_AXI_CHACHA20_NONCE1 + (0x4*i), u32NonceArray[i]);
+  }
   sim.AxiWrite(TX_AXI_CONTROL, 0x2); // Load SEED 
   sim.AxiWrite(TX_AXI_CONTROL, 0x1); // Write Request
   // check if transaction was accepted
   rdata = sim.AxiRead(TX_AXI_PRBS_SEED);
-  sim.Validate32Bit(seed, rdata, "Configure TX");
 }
 
 /** Configure Rx
 ****************************************************************************/
-void CTestPrbsCipher::ConfigureRx(uint32_t &seed)
+void CTestChaCha20::ConfigureRx(uint32_t &seed)
 {
   uint32_t rdata = 0;
   // --------------
@@ -54,7 +59,7 @@ void CTestPrbsCipher::ConfigureRx(uint32_t &seed)
 
 /** Hello World Test
 ****************************************************************************/
-void CTestPrbsCipher::TestHelloWorld()
+void CTestChaCha20::TestHelloWorld()
 {
   // Transmit data
   std::string txMsg = "Hello World!";
@@ -73,47 +78,21 @@ void CTestPrbsCipher::TestHelloWorld()
 }
 
 
-/** Calculate key Correlation
-****************************************************************************/
-void CTestPrbsCipher::TestKeyCorrelation()
-{
-  sAxiStreamData sData;
-  std::vector<int> x(256);
-
-  sim.PrintInfo("--Key Correlation");
-  // Send a constant message
-  // Write a stream of zeros, length 256 words
-  sim.WriteAxiStreamZeros(256);
-  sData = sim.ReadAxiStream(sim.m_sAxiStreamEncrypt.value(), 256);
-  iota(x.begin(), x.end(), 1);
-
-  printf("Data Length: %0d\n", size(sData.u32Sample));
-  for (size_t i=0; i < 10; i++) {
-    printf("idx: %0d, Data: %0u, x: %u\n", i, sData.u32Sample[i], x[i]);
-  }
-
-  // Capture the ciphered key stream
-
-  // Calculate correlation
-}
-
 /** Run Test Suite
 ****************************************************************************/
-void CTestPrbsCipher::RunTestSuite(uint32_t &seed)
+void CTestChaCha20::RunTestSuite(uint32_t &seed)
 {
+  uint32_t u32KeyArray[8] = {1,2,3,4,5,6,7,8};
+  uint32_t u32NonceArray[3] = {9,10,11};
+
   // Header
-  sim.PrintTestHeader("PRBS Cipher: Start");
+  sim.PrintTestHeader("ChaCha20: Start");
 
   // Configure Modules
-  ConfigureTx(seed);
-  ConfigureRx(seed);
+  ConfigureTx(u32KeyArray, u32NonceArray);
 
-
-  // Run Test Cases
-  TestHelloWorld();
-  TestKeyCorrelation();
 
   // Header
-  //sim.PrintTestHeader("PRBS Cipher: Done");
+  //sim.PrintTestHeader("ChaCha20: Done");
   cout << endl << endl;
 }
