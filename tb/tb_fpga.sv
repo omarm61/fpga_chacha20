@@ -126,6 +126,19 @@ module tb_fpga (
       .axi_m(axi_m)
   );
 
+  // HACK: Fix Metstability issue with incoming data
+  reg [31:0] r_s_axis_tx_tdata_d;
+  reg        r_s_axis_tx_tvalid_d;
+  always @(posedge s_axi_aclk or negedge s_axi_aresetn) begin
+    if (s_axi_aresetn == 1'b0) begin
+      r_s_axis_tx_tdata_d <= 'd0;
+      r_s_axis_tx_tvalid_d <= 1'b0;
+    end else begin
+      r_s_axis_tx_tdata_d <= s_axis_tx_tdata;
+      r_s_axis_tx_tvalid_d <= s_axis_tx_tvalid;
+    end
+  end
+
 
   // --------------------------------------
   // INDEX: ___
@@ -162,8 +175,8 @@ module tb_fpga (
 
       // AXI-Stream - INPUT encrypted data
       .s_axis_tready(s_axis_tx_tready),
-      .s_axis_tvalid(s_axis_tx_tvalid),
-      .s_axis_tdata (s_axis_tx_tdata),
+      .s_axis_tvalid(r_s_axis_tx_tvalid_d),
+      .s_axis_tdata (r_s_axis_tx_tdata_d),
 
       // AXI-Stream - OUTPUT encrypted data
       .m_axis_tready(m_axis_tx_tready),

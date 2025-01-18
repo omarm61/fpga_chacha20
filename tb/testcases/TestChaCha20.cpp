@@ -92,6 +92,9 @@ void CTestChaCha20::RunTestSuite(uint32_t &seed)
   // Configure Modules
   ConfigureTx(u32KeyArray, u32NonceArray);
 
+  // testcases
+  TestHelloWorld();
+
 
   // Header
   //sim.PrintTestHeader("ChaCha20: Done");

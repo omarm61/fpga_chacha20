@@ -41,11 +41,6 @@ module tx #(
     output wire [                        31:0] m_axis_tdata
 );
 
-  // **Parameters
-  localparam STATE_START = 0;
-  localparam STATE_KEYSTREAM_WAIT = 1;
-  localparam STATE_KEYSTREAM_UNPACK = 2;
-
   // **Wires
   wire [ 31:0] w_prbs_out;
   wire         w_reg_tx_enable;
@@ -55,24 +50,24 @@ module tx #(
   wire [ 31:0] w_reg_prbs_seed;
   wire [255:0] w_reg_chacha20_key;
   wire [ 95:0] w_reg_chacha20_nonce;
+  wire         w_chacha20_error;
+  wire         w_chacha20_req;
+  wire         w_chacha20_busy;
+  wire [ 31:0] w_chacha20_counter;
   wire [511:0] w_chacha20_keystream_data;
   wire         w_chacha20_keystream_valid;
-
+  wire [ 31:0] w_keystream_data;
   wire         w_keystream_valid;
+  wire         w_prbs_tready;
+  wire         w_chacha20_tready;
 
   // **Registers
-  reg  [  2:0] r_state;
   reg          r_axis_tvalid;
   reg          r_axis_sof;
   reg  [ 31:0] r_axis_tdata;
   reg          r_reg_tx_enable_d;
-  reg          r_keystream_req;
-  reg  [511:0] r_keystream_512bit;
-  reg  [ 31:0] r_keystream_32bit;
-  reg  [ 31:0] r_keystream_counter;
-  reg  [  4:0] r_keystream_index;
-  reg          r_keystream_valid;
-  reg          r_chacha20_error;
+  reg  [ 31:0] r_s_axis_tdata_d;
+  reg          r_s_axis_tvalid_d;
 
   // Assignment
   assign m_axis_tvalid = r_axis_tvalid;
@@ -80,7 +75,10 @@ module tx #(
   assign m_axis_tdata  = r_axis_tdata;
 
   assign w_prbs_run = w_reg_tx_enable && m_axis_tready && s_axis_tvalid;
-  assign s_axis_tready = w_reg_tx_enable && m_axis_tready;
+
+  assign w_prbs_tready = w_reg_tx_enable && m_axis_tready;
+  assign w_chacha20_tready = w_keystream_available && m_axis_tready;
+  assign s_axis_tready = (w_reg_encrypt_type)? w_chacha20_tready : w_prbs_tready;
 
 
   // -----------------------
@@ -98,8 +96,8 @@ module tx #(
       .o_reg_chacha20_key   (w_reg_chacha20_key),
       .o_reg_chacha20_nonce (w_reg_chacha20_nonce),
       // Status
-      .i_chacha20_counter (r_chacha20_counter),
-      .i_chacha20_error   (r_chacha20_error),
+      .i_chacha20_counter (w_chacha20_counter),
+      .i_chacha20_error   (w_chacha20_error),
       // AXI interface
       .S_AXI_ACLK       (s_axi_aclk),
       .S_AXI_ARESETN    (s_axi_aresetn),
@@ -140,86 +138,47 @@ module tx #(
   // ChaCha20 Cipher
   // -----------------------
   chacha20 chacha20_inst (
-      // Clock, Reset
-      .i_aclk           (s_axi_aclk),
-      .i_aresetn        (s_axi_aresetn),
-      // Control
-      .i_keystream_req  (r_keystream_req),
-      .i_key_reload     (w_reg_key_reload),
-      // Status
-      .o_busy           (w_chacha20_busy),
-      // Key
-      .i_key            (w_reg_chacha20_key),
-      // Nonce
-      .i_nonce          (w_reg_chacha20_nonce),
-      // Counter
-      .i_counter        (32'h0),
-      // Output Cipher
-      .o_keystream      (w_chacha20_keystream_data),
-      .o_keystream_valid(w_chacha20_keystream_valid)
+    // Clock, Reset
+    .i_aclk           (s_axi_aclk),
+    .i_aresetn        (s_axi_aresetn),
+    // Control
+    .i_keystream_req  (w_chacha20_req),
+    .i_key_reload     (w_reg_key_reload),
+    // Status
+    .o_busy           (w_chacha20_busy),
+    // Key
+    .i_key            (w_reg_chacha20_key),
+    // Nonce
+    .i_nonce          (w_reg_chacha20_nonce),
+    // Counter
+    .i_counter        (w_chacha20_counter),
+    // Output Cipher
+    .o_keystream      (w_chacha20_keystream_data),
+    .o_keystream_valid(w_chacha20_keystream_valid)
   );
 
-  // ChaCha20 Keystream handler 256bit to 32bit intervals
-  always @(posedge s_axi_aclk or negedge s_axi_aresetn) begin
-    if (s_axi_aresetn == 1'b0) begin
-      r_keystream_req <= 1'b0;
-      r_keystream_512bit  <= 'd0;
-      r_keystream_32bit   <= 'd0;
-      r_keystream_counter <= 'd0;
-      r_keystream_index   <= 'd0;
-      r_keystream_valid   <= 1'b0;
-    end else begin
-      case(r_state)
-        STATE_START: begin
-          if (w_reg_encrypt_type == 1'b1 &&
-              w_reg_tx_enable == 1'b1 && w_chacha20_busy == 1'b0) begin
-            // Request a new key
-            r_keystream_req <= 1'b1;
-            r_keystream_index <= 'd0;
-            r_state <= STATE_KEYSTREAM_WAIT;
-          end
-          // Reset the counter if the key is reloaded
-          if (w_reg_key_reload) begin
-            r_keystream_counter <= 'd0;
-          end
-        end
-        STATE_KEYSTREAM_WAIT: begin
-          // Wait for valid keystream
-          r_keystream_req <= 1'b0;
-          if (w_chacha20_keystream_valid == 1'b1) begin
-            r_keystream_512bit <= w_chacha20_keystream_data;
-            r_keystream_32bit <= w_chacha20_keystream_data[31:0];
-            r_keystream_valid <= 1'b1;
-            r_keystream_index <= r_keystream_index + 1;
-            r_chacha20_error <= 1'b0;
-            r_state <= STATE_KEYSTREAM_UNPACK;
-          end
-          // error handling
-          if (w_chacha20_busy == 1'b0 &&
-              r_keystream_req == 1'b0 && w_chacha20_keystream_valid == 1'b0) begin
-            r_chacha20_error <= 1'b1;
-            r_state <= STATE_START;
-          end else begin
-            r_chacha20_error <= 1'b0;
-          end
-        end
-        STATE_KEYSTREAM_UNPACK: begin
-          if (r_keystream_index < 5'd16) begin
-            // NOTE: This syntax is not supported in older verilog
-            r_keystream_32bit <= r_keystream_512bit[r_keystream_index*32+:32];
-            r_keystream_index <= r_keystream_index + 1;
-            r_keystream_valid <= 1'b1;
-          end else begin
-            r_state <= STATE_START;
-            r_keystream_counter <= r_keystream_counter + 1;
-            r_keystream_valid <= 1'b0;
-            r_keystream_index <= 'd0;
-          end
-        end
-        default: r_state <= STATE_START;
-      endcase
-    end
-  end
+  chacha20_stream chacha20_stream_inst (
+    // Clock, Reset
+    .i_aclk           (s_axi_aclk),
+    .i_aresetn        (s_axi_aresetn),
+
+    // Control
+    .i_enable     (w_reg_encrypt_type && w_reg_tx_enable),
+    .i_key_reload (w_reg_key_reload),
+    // Status
+    .o_error      (w_chacha20_error),
+    // ChaCha20 Interface
+    .o_chacha20_req             (w_chacha20_req),
+    .i_chacha20_busy            (w_chacha20_busy),
+    .o_chacha20_counter         (w_chacha20_counter),
+    .i_chacha20_keystream_data  (w_chacha20_keystream_data),
+    .i_chacha20_keystream_valid (w_chacha20_keystream_valid),
+    // Output Stream, 32bit output
+    .o_keystream_data  (w_keystream_data),
+    .o_keystream_valid (w_keystream_valid),
+    .i_keystream_ready (s_axis_tvalid && m_axis_tready),
+    .o_keystream_available (w_keystream_available)
+  );
 
   // AXI-Stream Master
   // Cipher
@@ -229,6 +188,8 @@ module tx #(
       r_axis_sof    <= 1'b0;
       r_axis_tdata  <= 'd0;
       r_reg_tx_enable_d <= 1'b0;
+      r_s_axis_tvalid_d <= 1'b0;
+      r_s_axis_tdata_d <= 'd0;
     end else begin
       //msh
       r_reg_tx_enable_d <= w_reg_tx_enable;
@@ -237,11 +198,24 @@ module tx #(
         // TODO: add logic to handle start of frame
         r_axis_sof <= 1'b0;
 
-        if (r_reg_tx_enable_d == 1'b1 && s_axis_tvalid == 1'b1) begin
-          r_axis_tvalid <= 1'b1;
-          r_axis_tdata  <= w_prbs_out ^ s_axis_tdata;
+        if (w_reg_encrypt_type == 1'b0) begin
+          // PRBS MODE
+          if (r_reg_tx_enable_d == 1'b1 && s_axis_tvalid == 1'b1) begin
+            r_axis_tvalid <= 1'b1;
+            r_axis_tdata  <= s_axis_tdata ^ w_prbs_out;
+          end else begin
+            r_axis_tvalid <= 1'b0;
+          end
         end else begin
-          r_axis_tvalid <= 1'b0;
+          r_s_axis_tdata_d <= s_axis_tdata;
+          r_s_axis_tvalid_d <= s_axis_tvalid;
+          // CHACHA20 MODE
+          if (w_keystream_valid == 1'b1) begin
+            r_axis_tvalid <= r_s_axis_tvalid_d;
+            r_axis_tdata  <= r_s_axis_tdata_d ^ w_keystream_data;
+          end else begin
+            r_axis_tvalid <= 1'b0;
+          end
         end
       end
     end

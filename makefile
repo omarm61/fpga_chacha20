@@ -21,6 +21,7 @@ INC_DIR += -I../rtl/tx
 INC_DIR += -I../rtl/rx
 INC_DIR += -I../rtl/fifo
 INC_DIR += -I../rtl/chacha20
+INC_DIR += -I../rtl/chacha20_stream
 INC_DIR += -I../rtl/axis_broadcaster
 
 .DEFAULT_GOAL := help

@@ -391,6 +391,7 @@ int CFpgaSim::WriteAxiStream(const std::string& strMsg)
   }
   Run(1);
   ptop->s_axis_tx_tvalid = 0;
+  Run(4);
 
   return 0;
 }
