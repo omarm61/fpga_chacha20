@@ -36,6 +36,11 @@ void CTestPrbsCipher::ConfigureTx(uint32_t &seed)
   sim.Validate32Bit(seed, rdata, "Configure TX");
 }
 
+void CTestPrbsCipher::DisableTx()
+{
+  sim.AxiSetBit(TX_AXI_CONTROL_OFFSET, TX_CONTROL_ENABLE_INDEX, 0);
+}
+
 /** Configure Rx
 ****************************************************************************/
 void CTestPrbsCipher::ConfigureRx(uint32_t &seed)
@@ -52,6 +57,12 @@ void CTestPrbsCipher::ConfigureRx(uint32_t &seed)
   rdata = sim.AxiRead(RX_AXI_PRBS_SEED_OFFSET);
   sim.Validate32Bit(seed, rdata, "Configure RX");
 }
+
+void CTestPrbsCipher::DisableRx()
+{
+  sim.AxiWrite(RX_AXI_CONTROL_OFFSET, 0x0); // Disable RX
+}
+
 
 /** Hello World Test
 ****************************************************************************/
@@ -113,6 +124,10 @@ void CTestPrbsCipher::RunTestSuite(uint32_t &seed)
   // Run Test Cases
   TestHelloWorld();
   TestKeyCorrelation();
+
+  // Disable TX and RX
+  DisableRx();
+  DisableTx();
 
   // Header
   //sim.PrintTestHeader("PRBS Cipher: Done");

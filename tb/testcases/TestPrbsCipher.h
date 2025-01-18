@@ -7,6 +7,8 @@ class CTestPrbsCipher
         CTestPrbsCipher(CFpgaSim& thesim): sim(thesim) {};
         void ConfigureRx(uint32_t &seed);
         void ConfigureTx(uint32_t &seed);
+        void DisableRx();
+        void DisableTx();
         // Test Functions
         void TestHelloWorld();
         void TestKeyCorrelation(); 

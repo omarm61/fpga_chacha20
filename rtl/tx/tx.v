@@ -171,7 +171,8 @@ module tx #(
     end else begin
       case(r_state)
         STATE_START: begin
-          if (w_reg_encrypt_type == 1'b1 && w_chacha20_busy == 1'b0) begin
+          if (w_reg_encrypt_type == 1'b1 &&
+              w_reg_tx_enable == 1'b1 && w_chacha20_busy == 1'b0) begin
             // Request a new key
             r_keystream_req <= 1'b1;
             r_keystream_index <= 'd0;
@@ -194,7 +195,8 @@ module tx #(
             r_state <= STATE_KEYSTREAM_UNPACK;
           end
           // error handling
-          if (w_chacha20_busy == 1'b0) begin
+          if (w_chacha20_busy == 1'b0 &&
+              r_keystream_req == 1'b0 && w_chacha20_keystream_valid == 1'b0) begin
             r_chacha20_error <= 1'b1;
             r_state <= STATE_START;
           end else begin
