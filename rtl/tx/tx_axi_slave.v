@@ -13,6 +13,7 @@ module tx_axi_slave #(
     // Control Registers
     output wire         o_reg_tx_enable,
     output wire         o_reg_key_reload,
+    output wire         o_reg_encrypt_type, // 0: PRBS, 1: CHACHA20
     output wire [31:0]  o_reg_prbs_seed,
     output wire [255:0] o_reg_chacha20_key,
     output wire [ 95:0] o_reg_chacha20_nonce,
@@ -332,9 +333,10 @@ module tx_axi_slave #(
 
   // Add user logic here
   // Control signals
-  assign o_reg_tx_enable   = slv_reg[0][0];
-  assign o_reg_key_reload  = slv_reg[0][1];
-  assign o_reg_prbs_seed   = slv_reg[1];
+  assign o_reg_tx_enable    = slv_reg[0][0];
+  assign o_reg_key_reload   = slv_reg[0][1];
+  assign o_reg_encrypt_type = slv_reg[0][2]; // 0: PRBS, 1: CHACHA20
+  assign o_reg_prbs_seed    = slv_reg[1];
   //slv_reg[2][0] <= i_chacha20_error;
   //slv_reg[2][31:16] <= 16'hdead;
   //slv_reg[3] <= i_chacha20_counter;

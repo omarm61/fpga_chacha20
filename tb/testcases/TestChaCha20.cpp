@@ -28,16 +28,17 @@ void CTestChaCha20::ConfigureTx(uint32_t u32KeyArray[], uint32_t u32NonceArray[]
   // --------------
   // Load Key
   for (size_t i = 0; i < 8; i++) {
-    sim.AxiWrite(TX_AXI_CHACHA20_KEY1 + (0x4*i), u32KeyArray[i]);
+    sim.AxiWrite(TX_AXI_CHACHA20_KEY1_OFFSET + (0x4*i), u32KeyArray[i]);
   }
   // Load Nonce
   for (size_t i = 0; i < 3; i++) {
-    sim.AxiWrite(TX_AXI_CHACHA20_NONCE1 + (0x4*i), u32NonceArray[i]);
+    sim.AxiWrite(TX_AXI_CHACHA20_NONCE1_OFFSET + (0x4*i), u32NonceArray[i]);
   }
-  sim.AxiWrite(TX_AXI_CONTROL, 0x2); // Load SEED 
-  sim.AxiWrite(TX_AXI_CONTROL, 0x1); // Write Request
+  sim.AxiSetBit(TX_AXI_CONTROL_OFFSET, TX_CONTROL_ENCRYPT_TYPE_INDEX, 1); // Enable ChaCha20 keystream
+  sim.AxiSetBit(TX_AXI_CONTROL_OFFSET, TX_CONTROL_KEY_RELOAD_INDEX, 1); // Load Key
+  sim.AxiSetBit(TX_AXI_CONTROL_OFFSET, TX_CONTROL_ENABLE_INDEX, 1); // Write Request
   // check if transaction was accepted
-  rdata = sim.AxiRead(TX_AXI_PRBS_SEED);
+  rdata = sim.AxiRead(TX_AXI_PRBS_SEED_OFFSET);
 }
 
 /** Configure Rx
@@ -49,11 +50,11 @@ void CTestChaCha20::ConfigureRx(uint32_t &seed)
   // Configure RX
   // --------------
   // Write SEED and enable module
-  sim.AxiWrite(RX_AXI_PRBS_SEED, seed); // Write PRBS seed 
-  sim.AxiWrite(RX_AXI_CONTROL, 0x2); // Load SEED 
-  sim.AxiWrite(RX_AXI_CONTROL, 0x1); // Write Request
+  sim.AxiWrite(RX_AXI_PRBS_SEED_OFFSET, seed); // Write PRBS seed 
+  sim.AxiWrite(RX_AXI_CONTROL_OFFSET, 0x2); // Load SEED 
+  sim.AxiWrite(RX_AXI_CONTROL_OFFSET, 0x1); // Write Request
   // check if transaction was accepted
-  rdata = sim.AxiRead(RX_AXI_PRBS_SEED);
+  rdata = sim.AxiRead(RX_AXI_PRBS_SEED_OFFSET);
   sim.Validate32Bit(seed, rdata, "Configure RX");
 }
 

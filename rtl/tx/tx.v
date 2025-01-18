@@ -50,6 +50,7 @@ module tx #(
   wire [ 31:0] w_prbs_out;
   wire         w_reg_tx_enable;
   wire         w_reg_key_reload;
+  wire         w_reg_encrypt_type;
   wire         w_prbs_run;
   wire [ 31:0] w_reg_prbs_seed;
   wire [255:0] w_reg_chacha20_key;
@@ -92,6 +93,7 @@ module tx #(
       // Control Registers
       .o_reg_tx_enable      (w_reg_tx_enable),
       .o_reg_key_reload     (w_reg_key_reload),
+      .o_reg_encrypt_type   (w_reg_encrypt_type),
       .o_reg_prbs_seed      (w_reg_prbs_seed),
       .o_reg_chacha20_key   (w_reg_chacha20_key),
       .o_reg_chacha20_nonce (w_reg_chacha20_nonce),
@@ -142,7 +144,7 @@ module tx #(
       .i_aclk           (s_axi_aclk),
       .i_aresetn        (s_axi_aresetn),
       // Control
-      .i_keystream_req  (w_reg_tx_enable),
+      .i_keystream_req  (r_keystream_req),
       .i_key_reload     (w_reg_key_reload),
       // Status
       .o_busy           (w_chacha20_busy),
@@ -169,7 +171,7 @@ module tx #(
     end else begin
       case(r_state)
         STATE_START: begin
-          if (w_reg_tx_enable == 1'b1 && w_chacha20_busy == 1'b0) begin
+          if (w_reg_encrypt_type == 1'b1 && w_chacha20_busy == 1'b0) begin
             // Request a new key
             r_keystream_req <= 1'b1;
             r_keystream_index <= 'd0;

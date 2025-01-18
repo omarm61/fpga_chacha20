@@ -5,6 +5,7 @@
 #include <optional>
 #include <vector>
 #include "Vtb_fpga.h"
+#include "../tb/FpgaRegisterMap.h"
 
 class VerilatedVcdC;
 class Vtb_fpga;
@@ -14,32 +15,6 @@ class Vtb_fpga;
 struct sAxiStreamData{
   std::vector<uint32_t> u32Sample;
 };
-
-
-// Register Map
-#define TX_AXI_OFFSET               0x0
-#define TX_AXI_CONTROL              TX_AXI_OFFSET+0x0
-#define TX_AXI_PRBS_SEED            TX_AXI_OFFSET+0x4
-#define TX_AXI_STATUS               TX_AXI_OFFSET+0x8
-#define TX_AXI_CHACHA20_COUNTER     TX_AXI_OFFSET+0xC
-// Key
-#define TX_AXI_CHACHA20_KEY1        TX_AXI_OFFSET+0x10
-#define TX_AXI_CHACHA20_KEY2        TX_AXI_OFFSET+0x14
-#define TX_AXI_CHACHA20_KEY3        TX_AXI_OFFSET+0x18
-#define TX_AXI_CHACHA20_KEY4        TX_AXI_OFFSET+0x1C
-#define TX_AXI_CHACHA20_KEY5        TX_AXI_OFFSET+0x20
-#define TX_AXI_CHACHA20_KEY6        TX_AXI_OFFSET+0x24
-#define TX_AXI_CHACHA20_KEY7        TX_AXI_OFFSET+0x28
-#define TX_AXI_CHACHA20_KEY8        TX_AXI_OFFSET+0x2C
-// Nonce
-#define TX_AXI_CHACHA20_NONCE1      TX_AXI_OFFSET+0x30
-#define TX_AXI_CHACHA20_NONCE2      TX_AXI_OFFSET+0x34
-#define TX_AXI_CHACHA20_NONCE3      TX_AXI_OFFSET+0x38
-
-
-#define RX_AXI_OFFSET     0x10000000
-#define RX_AXI_CONTROL    RX_AXI_OFFSET+0x0
-#define RX_AXI_PRBS_SEED  RX_AXI_OFFSET+0x4
 
 class CFpgaSim
 {

@@ -27,11 +27,12 @@ void CTestPrbsCipher::ConfigureTx(uint32_t &seed)
   // Configure TX
   // --------------
   // Write SEED and enable module
-  sim.AxiWrite(TX_AXI_PRBS_SEED, seed); // Write PRBS seed 
-  sim.AxiWrite(TX_AXI_CONTROL, 0x2); // Load SEED 
-  sim.AxiWrite(TX_AXI_CONTROL, 0x1); // Write Request
+  sim.AxiWrite(TX_AXI_PRBS_SEED_OFFSET, seed); // Write PRBS seed 
+  sim.AxiSetBit(TX_AXI_CONTROL_OFFSET, TX_CONTROL_ENCRYPT_TYPE_INDEX, 0); // Enable PRBS
+  sim.AxiSetBit(TX_AXI_CONTROL_OFFSET, TX_CONTROL_KEY_RELOAD_INDEX, 1); // Load Key
+  sim.AxiSetBit(TX_AXI_CONTROL_OFFSET, TX_CONTROL_ENABLE_INDEX, 1); // Write Request
   // check if transaction was accepted
-  rdata = sim.AxiRead(TX_AXI_PRBS_SEED);
+  rdata = sim.AxiRead(TX_AXI_PRBS_SEED_OFFSET);
   sim.Validate32Bit(seed, rdata, "Configure TX");
 }
 
@@ -44,11 +45,11 @@ void CTestPrbsCipher::ConfigureRx(uint32_t &seed)
   // Configure RX
   // --------------
   // Write SEED and enable module
-  sim.AxiWrite(RX_AXI_PRBS_SEED, seed); // Write PRBS seed 
-  sim.AxiWrite(RX_AXI_CONTROL, 0x2); // Load SEED 
-  sim.AxiWrite(RX_AXI_CONTROL, 0x1); // Write Request
+  sim.AxiWrite(RX_AXI_PRBS_SEED_OFFSET, seed); // Write PRBS seed 
+  sim.AxiWrite(RX_AXI_CONTROL_OFFSET, 0x2); // Load SEED 
+  sim.AxiWrite(RX_AXI_CONTROL_OFFSET, 0x1); // Write Request
   // check if transaction was accepted
-  rdata = sim.AxiRead(RX_AXI_PRBS_SEED);
+  rdata = sim.AxiRead(RX_AXI_PRBS_SEED_OFFSET);
   sim.Validate32Bit(seed, rdata, "Configure RX");
 }
 
