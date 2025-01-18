@@ -50,6 +50,21 @@ module rx #(
   wire [31:0] w_reg_prbs_seed;
   wire        w_reg_rx_enable;
   wire        w_reg_prbs_reload;
+  wire         w_reg_encrypt_type;
+  wire [255:0] w_reg_chacha20_key;
+  wire [ 95:0] w_reg_chacha20_nonce;
+  wire         w_chacha20_error;
+  wire         w_chacha20_req;
+  wire         w_chacha20_busy;
+  wire [ 31:0] w_chacha20_counter;
+  wire [511:0] w_chacha20_keystream_data;
+  wire         w_chacha20_keystream_valid;
+  wire [ 31:0] w_keystream_data;
+  wire         w_keystream_valid;
+  wire         w_prbs_tready;
+  wire         w_chacha20_tready;
+  wire         w_keystream_available;
+
 
   // **Registers
   reg         r_axis_tready;
@@ -76,9 +91,12 @@ module rx #(
       .C_S_AXI_ADDR_WIDTH(C_S_AXI_ADDR_WIDTH)
   ) rx_axi_slave_inst (
       // Registers
-      .o_reg_rx_enable  (w_reg_rx_enable),
-      .o_reg_prbs_reload(w_reg_prbs_reload),
-      .o_reg_prbs_seed  (w_reg_prbs_seed),
+      .o_reg_rx_enable      (w_reg_rx_enable),
+      .o_reg_key_reload    (w_reg_key_reload),
+      .o_reg_encrypt_type   (w_reg_encrypt_type),
+      .o_reg_prbs_seed      (w_reg_prbs_seed),
+      .o_reg_chacha20_key   (w_reg_chacha20_key),
+      .o_reg_chacha20_nonce (w_reg_chacha20_nonce),
       // AXI Bus
       .S_AXI_ACLK       (s_axi_aclk),
       .S_AXI_ARESETN    (s_axi_aresetn),
@@ -113,6 +131,52 @@ module rx #(
       .i_prbs_reload(w_reg_prbs_reload),
       .i_prbs_seed  (w_reg_prbs_seed),
       .o_prbs       (w_prbs_out)
+  );
+
+  // -----------------------
+  // ChaCha20 Cipher
+  // -----------------------
+  chacha20 chacha20_inst (
+    // Clock, Reset
+    .i_aclk           (s_axi_aclk),
+    .i_aresetn        (s_axi_aresetn),
+    // Control
+    .i_keystream_req  (w_chacha20_req),
+    .i_key_reload     (w_reg_key_reload),
+    // Status
+    .o_busy           (w_chacha20_busy),
+    // Key
+    .i_key            (w_reg_chacha20_key),
+    // Nonce
+    .i_nonce          (w_reg_chacha20_nonce),
+    // Counter
+    .i_counter        (w_chacha20_counter),
+    // Output Cipher
+    .o_keystream      (w_chacha20_keystream_data),
+    .o_keystream_valid(w_chacha20_keystream_valid)
+  );
+
+  chacha20_stream chacha20_stream_inst (
+    // Clock, Reset
+    .i_aclk           (s_axi_aclk),
+    .i_aresetn        (s_axi_aresetn),
+
+    // Control
+    .i_enable     (w_reg_encrypt_type && w_reg_rx_enable),
+    .i_key_reload (w_reg_key_reload),
+    // Status
+    .o_error      (w_chacha20_error),
+    // ChaCha20 Interface
+    .o_chacha20_req             (w_chacha20_req),
+    .i_chacha20_busy            (w_chacha20_busy),
+    .o_chacha20_counter         (w_chacha20_counter),
+    .i_chacha20_keystream_data  (w_chacha20_keystream_data),
+    .i_chacha20_keystream_valid (w_chacha20_keystream_valid),
+    // Output Stream, 32bit output
+    .o_keystream_data  (w_keystream_data),
+    .o_keystream_valid (w_keystream_valid),
+    .i_keystream_ready (s_axis_tvalid && m_axis_tready),
+    .o_keystream_available (w_keystream_available)
   );
 
 

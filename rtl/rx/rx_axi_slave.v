@@ -12,10 +12,15 @@ module rx_axi_slave #(
 ) (
     // Users to add ports here
     // Control Registers
-    output wire        o_reg_rx_enable,
-    output wire        o_reg_prbs_reload,
-    output wire [31:0] o_reg_prbs_seed,
-    // Do not modify the ports beyond this line
+    output wire         o_reg_rx_enable,
+    output wire         o_reg_key_reload,
+    output wire         o_reg_encrypt_type, // 0: PRBS, 1: CHACHA20
+    output wire [31:0]  o_reg_prbs_seed,
+    output wire [255:0] o_reg_chacha20_key,
+    output wire [ 95:0] o_reg_chacha20_nonce,
+    // Status Registers
+    input  wire [31:0]  i_chacha20_counter,
+    input  wire         i_chacha20_error,
 
     // Global Clock Signal
     input wire S_AXI_ACLK,
@@ -96,7 +101,7 @@ module rx_axi_slave #(
   // ADDR_LSB is used for addressing 32/64 bit registers/memories
   // ADDR_LSB = 2 for 32 bits (n downto 2)
   // ADDR_LSB = 3 for 64 bits (n downto 3)
-  `define NUM_REG 4
+  `define NUM_REG 15
   localparam integer ADDR_LSB = (C_S_AXI_DATA_WIDTH / 32) + 1;
   localparam integer OPT_MEM_ADDR_BITS = $clog2(`NUM_REG);
   //----------------------------------------------
@@ -222,6 +227,10 @@ module rx_axi_slave #(
       if (slv_reg[0][1] == 1'b1) begin
         slv_reg[0][1] <= 1'b0;
       end
+      // Status register
+      slv_reg[2][0] <= i_chacha20_error;
+      slv_reg[2][31:16] <= 16'hdead;
+      slv_reg[3] <= i_chacha20_counter;
     end
   end
 
@@ -326,8 +335,19 @@ module rx_axi_slave #(
   // Add user logic here
   // Control signals
   assign o_reg_rx_enable   = slv_reg[0][0];
-  assign o_reg_prbs_reload = slv_reg[0][1];
+  assign o_reg_key_reload = slv_reg[0][1];
+  assign o_reg_encrypt_type = slv_reg[0][2]; // 0: PRBS, 1: CHACHA20
   assign o_reg_prbs_seed   = slv_reg[1];
+
+  genvar i_inst;
+  generate
+    for (i_inst = 0; i_inst < 8; i_inst = i_inst + 1) begin : gen_key_assignment
+      assign o_reg_chacha20_key[32*i_inst+:32] = slv_reg[4+i_inst];
+    end
+    for (i_inst = 0; i_inst < 3; i_inst = i_inst + 1) begin : gen_nonce
+      assign o_reg_chacha20_key[32*i_inst+:32] = slv_reg[12+i_inst];
+    end
+  endgenerate
 
 
   // User logic ends

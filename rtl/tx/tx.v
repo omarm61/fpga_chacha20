@@ -60,6 +60,7 @@ module tx #(
   wire         w_keystream_valid;
   wire         w_prbs_tready;
   wire         w_chacha20_tready;
+  wire         w_keystream_available;
 
   // **Registers
   reg          r_axis_tvalid;
