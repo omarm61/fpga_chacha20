@@ -190,9 +190,15 @@ module rx #(
       // msh
       r_reg_rx_enable_d <= w_reg_rx_enable;
 
-      // Enable AXI-Stream if reciever is enabled
-      if (r_reg_rx_enable_d == 1'b1) begin
-        r_axis_tready <= 1'b1;
+      if (w_reg_encrypt_type == 1'b0) begin
+        // PRBS MODE
+        // Enable AXI-Stream if reciever is enabled
+        if (r_reg_rx_enable_d == 1'b1) begin
+          r_axis_tready <= 1'b1;
+        end
+      end else begin
+        // ChaCha20 MODE
+        r_axis_tready <= w_keystream_valid || w_keystream_available;
       end
     end
   end
@@ -225,11 +231,22 @@ module rx #(
       r_axis_tvalid <= 1'b0;
     end else begin
       if (m_axis_tready) begin
-        if (r_prbs_run) begin
-          r_axis_tdata  <= r_rx_data ^ w_prbs_out;
-          r_axis_tvalid <= 1'b1;
+        if (w_reg_encrypt_type == 1'b0) begin
+          // PRBS MODE
+          if (r_prbs_run) begin
+            r_axis_tdata  <= r_rx_data ^ w_prbs_out;
+            r_axis_tvalid <= 1'b1;
+          end else begin
+            r_axis_tvalid <= 1'b0;
+          end
         end else begin
-          r_axis_tvalid <= 1'b0;
+          // ChaCha20 MODE
+          if (w_keystream_valid == 1'b1) begin
+            r_axis_tdata  <= r_rx_data ^ w_keystream_data;
+            r_axis_tvalid <= 1'b1;
+          end else begin
+            r_axis_tvalid <= 1'b0;
+          end
         end
       end
     end

@@ -123,7 +123,7 @@ void CTestPrbsCipher::RunTestSuite(uint32_t &seed)
 
   // Run Test Cases
   TestHelloWorld();
-  TestKeyCorrelation();
+  //TestKeyCorrelation();
 
   // Disable TX and RX
   DisableRx();

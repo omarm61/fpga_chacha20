@@ -1,9 +1,9 @@
 # fpga_chacha20
 
-> [!caution]
+> [!WARNING]
 > This project is under development.
 
-This is a derivative ChaCha20 algorithm implementation in RTL.
+This project was not tested against other implementations. Currently, this simulation runs a `Hello, World!` test using a PRBS and the ChaCha20 cipher.
 
 
 
