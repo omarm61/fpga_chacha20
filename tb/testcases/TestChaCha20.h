@@ -5,7 +5,7 @@ class CTestChaCha20
 {
     public:
         CTestChaCha20(CFpgaSim& thesim): sim(thesim) {};
-        void ConfigureRx(uint32_t &seed);
+        void ConfigureRx(uint32_t u32KeyArray[], uint32_t u32NonceArray[]);
         void ConfigureTx(uint32_t u32KeyArray[], uint32_t u32NonceArray[]);
         // Test Functions
         void TestHelloWorld();

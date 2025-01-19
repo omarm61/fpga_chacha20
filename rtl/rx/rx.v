@@ -49,7 +49,7 @@ module rx #(
   wire [31:0] w_prbs_out;
   wire [31:0] w_reg_prbs_seed;
   wire        w_reg_rx_enable;
-  wire        w_reg_prbs_reload;
+  wire        w_reg_key_reload;
   wire         w_reg_encrypt_type;
   wire [255:0] w_reg_chacha20_key;
   wire [ 95:0] w_reg_chacha20_nonce;
@@ -92,7 +92,7 @@ module rx #(
   ) rx_axi_slave_inst (
       // Registers
       .o_reg_rx_enable      (w_reg_rx_enable),
-      .o_reg_key_reload    (w_reg_key_reload),
+      .o_reg_key_reload     (w_reg_key_reload),
       .o_reg_encrypt_type   (w_reg_encrypt_type),
       .o_reg_prbs_seed      (w_reg_prbs_seed),
       .o_reg_chacha20_key   (w_reg_chacha20_key),
@@ -128,7 +128,7 @@ module rx #(
       .i_aclk       (s_axi_aclk),
       .i_aresetn    (s_axi_aresetn),
       .i_prbs_run   (r_prbs_run),
-      .i_prbs_reload(w_reg_prbs_reload),
+      .i_prbs_reload(w_reg_key_reload),
       .i_prbs_seed  (w_reg_prbs_seed),
       .o_prbs       (w_prbs_out)
   );
